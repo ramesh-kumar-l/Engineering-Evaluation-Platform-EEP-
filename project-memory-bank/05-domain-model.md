@@ -3,9 +3,12 @@
 The fundamental unit of EEP is the **Engineering Task** — not a prompt, a file, a repository, a
 model, or an agent. Those are dimensions along which a task is evaluated.
 
-Full concrete schemas (TypeScript types / validation) are Phase 1 (Evaluation Contract) work.
-This file records only the conceptual entities and their responsibilities, kept stable so Phase 1
-has a fixed target.
+Concrete schemas (TypeScript types / Zod validation) are implemented as of Phase 1 (Evaluation
+Contract) under `src/domain/`, one subdirectory per entity family — see `project-memory-bank/
+schemas/*.md` for pointers to the exact source file and version constant per entity. This file
+continues to record only the conceptual entities and their responsibilities; it is the fixed
+target the Phase 1 implementation was built against and stays the reference for future schema
+changes.
 
 | Entity | Responsibility |
 |---|---|

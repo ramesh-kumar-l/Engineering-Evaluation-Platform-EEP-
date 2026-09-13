@@ -1,0 +1,27 @@
+import type { RunStatus } from '../common/status.js';
+import type { ContextArtifact } from '../evidence/context-artifact.schema.js';
+import type { Action } from '../trace/action.schema.js';
+import type { Decision } from '../trace/decision.schema.js';
+import type { Task } from '../task/task.schema.js';
+
+export interface AgentRunRequest {
+  readonly task: Task;
+  readonly repositoryPath: string;
+  readonly contextArtifact?: ContextArtifact;
+}
+
+export interface AgentRunResult {
+  readonly status: RunStatus;
+  readonly actions: Action[];
+  readonly decisions: Decision[];
+}
+
+/**
+ * The contract every agent implementation satisfies, so a new agent can be added without
+ * modifying core evaluation logic (project-memory-bank/03-requirements.md NFR7).
+ */
+export interface Agent {
+  readonly name: string;
+  readonly version: string;
+  run(request: AgentRunRequest): Promise<AgentRunResult>;
+}

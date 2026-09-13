@@ -52,3 +52,27 @@ Format: Decision / Context / Options / Chosen approach / Reason / Trade-offs / C
 - **Reason:** Matches the "scientific instrument first" objective and local-first principle;
   avoids infrastructure complexity before the data model/metrics are validated.
 - **Status:** Accepted; revisit only when a concrete Phase 9+ requirement demands it.
+
+## ADR-005: Zod for schemas, semver literal field for versioning
+
+- **Context:** Phase 1 (Evaluation Contract) needed a concrete way to define the 14 domain
+  entities ([[05-domain-model]]) as both compile-time types and runtime validators, plus a
+  versioning convention satisfying NFR6 (independent versioning per schema).
+- **Options considered:** hand-written TS interfaces + manual runtime checks; io-ts; Zod.
+- **Chosen approach:** Zod schemas as the single source of truth; each entity module exports a
+  `<ENTITY>_SCHEMA_VERSION` constant and embeds it as a `z.literal(...)` `schemaVersion` field on
+  the schema itself, so every serialized artifact self-describes the schema version it was
+  written against. Entity IDs are compile-time-branded strings (e.g. `TaskId` vs `RunId` cannot
+  be substituted for each other) via a small local `brandedId()` helper, not Zod's built-in
+  `.brand()`, to stay resilient to Zod major-version API changes.
+- **Reason:** Zod gives one definition for both static types (`z.infer`) and runtime validation,
+  which the JSON/artifact-heavy domain model needs; the memory-bank `schemas/*.md` stubs
+  explicitly deferred concrete schema choice to this phase.
+- **Trade-offs:** All future contributors must know Zod; schema files sit above the file-size
+  norm for trivial entities only in the sense that each carries its own version constant and
+  doc-comment, not extra logic.
+- **Consequences:** `project-memory-bank/schemas/*.md` files are now thin pointers to
+  `src/domain/**/*.schema.ts` rather than duplicated specs, to avoid drift (memory-bank
+  token-efficiency rule). A breaking field change bumps the relevant `*_SCHEMA_VERSION` and gets
+  a new ADR entry or an addendum here.
+- **Status:** Accepted.
