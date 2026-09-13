@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "refactoring-01",
+  "taskVersion": "1.0.0",
+  "title": "Extract duplicated validation logic into shared module",
+  "description": "Three separate modules each re-implement near-identical email/phone/postal-code validation with subtle inconsistencies (different regexes, different trimming behavior). Extract a single shared validation module used by all three call sites, preserving each call site's externally observable validation behavior for currently-valid and currently-invalid inputs used in existing tests.",
+  "category": "refactoring",
+  "complexity": "L2",
+  "repository": { "url": "benchmark/fixtures/refactoring-01", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "All three call sites import validation logic from one new shared module rather than local copies.",
+    "No duplicated validation regex/logic remains in the three original modules.",
+    "All pre-existing tests for the three call sites continue to pass unchanged.",
+    "The shared module has its own direct unit tests independent of the three call sites."
+  ],
+  "verificationMethod": "diff-analysis: confirm the three original modules no longer contain the duplicated logic, combined with a test-suite run of both existing and new shared-module tests.",
+  "groundTruth": "A single validation module exports isValidEmail, isValidPhone, isValidPostalCode; each call site is updated to import and delegate to these, with any previously-inconsistent behavior reconciled to match whichever behavior the existing tests actually assert.",
+  "tags": ["refactoring", "duplication", "validation"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

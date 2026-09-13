@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "code-review-02",
+  "taskVersion": "1.0.0",
+  "title": "Review a proposed module-boundary change for architectural soundness",
+  "description": "Given a proposed diff that has a new 'billing' module directly import internal, non-exported functions from the 'users' module's implementation files (rather than its public API), review the change for architectural soundness and identify the boundary violation, its risks, and a concrete corrected design.",
+  "category": "code-review",
+  "complexity": "L3",
+  "repository": { "url": "benchmark/fixtures/code-review-02", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "The review explicitly identifies the cross-module import of non-public internals as a boundary violation.",
+    "The review explains at least one concrete risk this creates (e.g. breaking billing silently on an unrelated users-module refactor).",
+    "The review proposes a concrete corrected design (e.g. an exported public function/interface on the users module that billing should depend on instead).",
+    "The review does not flag unrelated, architecturally sound parts of the diff as problems."
+  ],
+  "verificationMethod": "human-review (with architecture-check as a secondary automated signal, e.g. a dependency-boundary linter rule): review is checked against the known injected boundary violation in the fixture diff.",
+  "groundTruth": "The fixture diff has billing/invoice.js importing directly from users/internal/hash.js instead of a public users/index.js export; the correct design adds a narrow exported function on the users module's public surface and has billing depend only on that.",
+  "tags": ["code-review", "architecture", "module-boundaries"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

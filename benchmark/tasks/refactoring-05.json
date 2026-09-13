@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "refactoring-05",
+  "taskVersion": "1.0.0",
+  "title": "Simplify deeply nested conditional pricing logic",
+  "description": "A pricing-calculation function has five levels of nested if/else branching handling combinations of customer tier, promo codes, and regional tax rules, making it difficult to verify and extend. Refactor it into an equivalent, flatter implementation (guard clauses and/or a small rule table) with identical output for all existing test cases.",
+  "category": "refactoring",
+  "complexity": "L2",
+  "repository": { "url": "benchmark/fixtures/refactoring-05", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "Maximum nesting depth in the refactored function is reduced to at most two levels.",
+    "All existing pricing test cases produce byte-identical output before and after the refactor.",
+    "No new pricing rule or behavior is introduced beyond what the original nested logic implemented.",
+    "The refactored function is demonstrably easier to extend, evidenced by an added test for one new tier/promo combination requiring only a small, localized change."
+  ],
+  "verificationMethod": "test-suite: run the full existing pricing test suite unchanged, plus one added combination test, and diff-analysis to confirm a behavior-preserving structural change.",
+  "groundTruth": "The nested conditionals are replaced with early-return guard clauses and/or a lookup table keyed by (tier, promoActive, region), producing exactly the same price for every input the original branching handled.",
+  "tags": ["refactoring", "readability", "pricing-logic"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

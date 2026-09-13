@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "refactoring-02",
+  "taskVersion": "1.0.0",
+  "title": "Convert callback-based data-access API to async/await",
+  "description": "A core data-access module exposes a Node-style callback API (fn(args, (err, result) => {...})). Convert its internal implementation and public surface to Promise-returning async functions, providing a thin backward-compatible callback wrapper for any external callers that cannot be updated in this change.",
+  "category": "refactoring",
+  "complexity": "L3",
+  "repository": { "url": "benchmark/fixtures/refactoring-02", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "The module's primary functions return Promises and can be used with async/await.",
+    "A callback-style wrapper is provided so existing callback-based call sites in the fixture continue to work without modification.",
+    "Errors that previously arrived as the callback's err argument now reject the returned Promise with an equivalent error.",
+    "All existing tests pass either unchanged (via the wrapper) or updated to the new Promise-based style, not both duplicated."
+  ],
+  "verificationMethod": "test-suite: run the module's tests in both the async/await call style and, for the wrapper, the original callback style.",
+  "groundTruth": "Internal implementation is rewritten using async/await; a callbackify-style wrapper (native util.callbackify or an equivalent local implementation) adapts the new Promise-based functions back to the old callback signature for any callers not migrated in this change.",
+  "tags": ["refactoring", "async", "promises"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

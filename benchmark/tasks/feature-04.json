@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "feature-04",
+  "taskVersion": "1.0.0",
+  "title": "Implement soft-delete for records API",
+  "description": "The records API currently hard-deletes rows on DELETE requests. Add soft-delete semantics: a deletedAt timestamp is set instead of removing the row, deleted records are excluded from normal list/get responses, and a new admin-only endpoint can list and restore soft-deleted records.",
+  "category": "feature",
+  "complexity": "L2",
+  "repository": { "url": "benchmark/fixtures/feature-04", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "DELETE requests set deletedAt instead of removing the row from storage.",
+    "Standard list and get endpoints exclude records with a non-null deletedAt by default.",
+    "The new admin list-deleted endpoint returns only soft-deleted records.",
+    "A restore endpoint clears deletedAt and makes the record visible again through standard endpoints.",
+    "Existing tests that assume hard-delete are updated to assert soft-delete semantics instead."
+  ],
+  "verificationMethod": "test-suite: run the API integration tests covering delete, list-exclusion, admin listing, and restore flows.",
+  "groundTruth": "Delete handler performs an update setting deletedAt = now() rather than a row removal; all read queries add a deletedAt IS NULL (or equivalent) predicate unless explicitly querying the admin deleted-records path.",
+  "tags": ["api", "soft-delete", "data-model"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

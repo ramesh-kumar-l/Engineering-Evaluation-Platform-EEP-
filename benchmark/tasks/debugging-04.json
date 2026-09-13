@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "debugging-04",
+  "taskVersion": "1.0.0",
+  "title": "Memory leak from unremoved event listeners",
+  "description": "A long-running worker component subscribes to an event emitter each time a job starts but never unsubscribes when the job completes, causing listener count (and retained closures) to grow unbounded over the process lifetime and eventually degrading throughput.",
+  "category": "debugging",
+  "complexity": "L3",
+  "repository": { "url": "benchmark/fixtures/debugging-04", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "Listener count on the shared emitter returns to its pre-job baseline after each job completes, including when a job throws.",
+    "No previously-passing behavior (job execution, event delivery during the job) regresses.",
+    "A test that runs 100 sequential jobs and asserts stable listener count passes.",
+    "Cleanup happens via a finally-equivalent path so a thrown error does not skip listener removal."
+  ],
+  "verificationMethod": "test-suite: run the added listener-count regression test (100 sequential jobs) plus the existing worker test suite.",
+  "groundTruth": "The subscribe call has no matching removeListener/off call; the fix stores a reference to the bound handler and removes it in a finally block when the job settles, success or failure.",
+  "tags": ["memory-leak", "event-emitter", "cleanup"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

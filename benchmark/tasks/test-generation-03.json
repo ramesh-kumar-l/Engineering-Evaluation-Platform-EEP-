@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "test-generation-03",
+  "taskVersion": "1.0.0",
+  "title": "Write regression tests for a previously-fixed rounding bug",
+  "description": "A changelog entry documents that a currency-rounding bug (values like 19.995 rounding down instead of to the nearest cent) was fixed previously, but no regression test was ever added, so the bug could silently reappear. Write regression tests that would fail against the old buggy behavior and pass against the current fixed implementation.",
+  "category": "test-generation",
+  "complexity": "L2",
+  "repository": { "url": "benchmark/fixtures/test-generation-03", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "At least one test uses an input value documented in the changelog as having previously triggered the bug.",
+    "The added tests fail if the rounding implementation is reverted to simple truncation (verified by temporarily reverting and confirming failure, then restoring the fix).",
+    "The added tests pass against the current implementation.",
+    "Tests cover both the exact previously-buggy value and at least one additional boundary case (e.g. exact half-cent)."
+  ],
+  "verificationMethod": "test-suite: run the new regression tests against the current implementation (must pass) and confirm via diff-analysis that they would have failed against the pre-fix implementation.",
+  "groundTruth": "Regression tests assert that 19.995 rounds to 20.00 (or the documented correct rounding rule) and that a half-cent boundary case rounds according to the same documented rule, both of which fail under naive truncation.",
+  "tags": ["testing", "regression", "rounding"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

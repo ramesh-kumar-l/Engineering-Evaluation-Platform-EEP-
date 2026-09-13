@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "test-generation-02",
+  "taskVersion": "1.0.0",
+  "title": "Add integration tests for auth middleware",
+  "description": "Authentication middleware that validates bearer tokens and attaches a user context to requests has only a couple of shallow tests. Add integration-level tests exercising the middleware against a running fixture HTTP server: valid token, expired token, malformed token, missing header, and revoked token cases.",
+  "category": "test-generation",
+  "complexity": "L2",
+  "repository": { "url": "benchmark/fixtures/test-generation-02", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "A request with a valid, unexpired, non-revoked token reaches the downstream handler with the correct user context attached.",
+    "Expired, malformed, missing, and revoked-token cases each return the correct 401/403 response without reaching the downstream handler.",
+    "Tests spin up and tear down the fixture HTTP server cleanly with no leaked open handles between test cases.",
+    "Existing shallow tests are kept or superseded, not left duplicated with the new integration tests."
+  ],
+  "verificationMethod": "test-suite: run the new integration test file against the fixture server, confirming clean process exit (no leaked handles).",
+  "groundTruth": "A full integration suite starts the fixture server on an ephemeral port, issues real HTTP requests with each token variant, and asserts on both status code and, where applicable, the attached user context, tearing the server down after each test.",
+  "tags": ["testing", "integration", "authentication"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

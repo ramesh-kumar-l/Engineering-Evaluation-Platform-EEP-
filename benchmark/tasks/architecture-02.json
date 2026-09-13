@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "architecture-02",
+  "taskVersion": "1.0.0",
+  "title": "Propose a caching strategy for a read-heavy product catalog service",
+  "description": "A read-heavy 'product catalog' service currently hits the database on every request and is becoming a bottleneck. Produce a caching strategy proposal covering cache placement (in-process vs. shared), invalidation strategy on writes, staleness tolerance, and cold-start/thundering-herd handling, plus a minimal interface skeleton for the chosen caching abstraction.",
+  "category": "architecture",
+  "complexity": "L4",
+  "repository": { "url": "benchmark/fixtures/architecture-02", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "The proposal explicitly justifies a cache placement choice given the service's stated read/write ratio and multi-instance deployment.",
+    "The proposal defines a concrete invalidation strategy triggered by writes, not a fixed-TTL-only approach, unless a fixed TTL is explicitly justified as sufficient given stated staleness tolerance.",
+    "The proposal addresses thundering-herd risk on cache misses for popular keys (e.g. request coalescing or a stale-while-revalidate approach).",
+    "A minimal interface skeleton for the caching abstraction is provided and compiles, decoupled from any specific cache backend.",
+    "The proposal states measurable success criteria (e.g. target cache hit rate, target p95 latency) rather than only qualitative goals."
+  ],
+  "verificationMethod": "architecture-check (human-review as primary authority): reviewed against the acceptance criteria; interface skeleton verified to compile.",
+  "groundTruth": "A sound proposal uses a shared cache (given multi-instance deployment) with write-triggered invalidation (or explicit versioned keys), request coalescing (a single in-flight fetch per key on miss) to prevent thundering herd, and a backend-agnostic Cache interface (get/set/invalidate) so the backend can change without touching call sites.",
+  "tags": ["architecture", "caching", "scalability"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

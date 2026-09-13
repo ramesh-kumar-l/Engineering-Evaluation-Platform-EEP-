@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "migration-02",
+  "taskVersion": "1.0.0",
+  "title": "Upgrade from callback-style DB driver to promise-based driver",
+  "description": "The fixture currently uses an older callback-style database driver throughout its data-access layer. Migrate the data-access layer to a promise-based driver (a different package with a different, though similar, API), preserving all existing query behavior and transaction semantics.",
+  "category": "migration",
+  "complexity": "L4",
+  "repository": { "url": "benchmark/fixtures/migration-02", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "All data-access functions use the new promise-based driver's API instead of the old callback driver.",
+    "Transaction boundaries (begin/commit/rollback) behave identically to before, including rollback-on-error behavior.",
+    "Connection pooling configuration is preserved or explicitly and correctly translated to the new driver's equivalent options.",
+    "All existing data-access tests pass against the new driver without weakening any assertions.",
+    "The old callback driver dependency is fully removed from package.json."
+  ],
+  "verificationMethod": "test-suite: run the full data-access and transaction test suite against the new driver, including forced-rollback-on-error cases.",
+  "groundTruth": "Each query/transaction call site is rewritten to the new driver's promise API with equivalent option translation (pool size, timeouts), and the old driver package is removed once no import of it remains.",
+  "tags": ["migration", "database", "driver"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

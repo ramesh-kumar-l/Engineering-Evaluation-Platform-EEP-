@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "migration-01",
+  "taskVersion": "1.0.0",
+  "title": "Migrate CommonJS utility package to ESM",
+  "description": "The fixture's utility package is written in CommonJS (require/module.exports) and needs to be migrated to native ES modules (import/export) to align with the rest of the toolchain, while remaining consumable by any remaining CommonJS callers via Node's interop.",
+  "category": "migration",
+  "complexity": "L3",
+  "repository": { "url": "benchmark/fixtures/migration-01", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "All source files use import/export syntax instead of require/module.exports.",
+    "package.json is updated (type: module and/or exports map) so the package resolves correctly as ESM.",
+    "A documented interop path (e.g. a generated CJS build or dual-package exports map) allows existing CommonJS callers to keep working.",
+    "All existing tests pass after the migration without behavior changes.",
+    "No remaining require() calls exist in the migrated source files, only in interop shim code if present."
+  ],
+  "verificationMethod": "test-suite: run the full existing test suite post-migration, plus a repository-invariant check that no require()/module.exports remain in migrated source files.",
+  "groundTruth": "Every source file's require/module.exports is converted to import/export, package.json declares type: module with an exports map, and a small CJS interop wrapper (or dual build) preserves compatibility for CommonJS consumers.",
+  "tags": ["migration", "esm", "modules"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "feature-02",
+  "taskVersion": "1.0.0",
+  "title": "Implement token-bucket rate limiting middleware",
+  "description": "Implement request rate-limiting middleware for the fixture's HTTP layer using a token-bucket algorithm, configurable per-route with a requests-per-window limit, returning HTTP 429 with a Retry-After header once a client exceeds its limit.",
+  "category": "feature",
+  "complexity": "L3",
+  "repository": { "url": "benchmark/fixtures/feature-02", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "Requests under the configured limit are passed through unmodified.",
+    "Requests exceeding the limit receive a 429 response with a numerically correct Retry-After header.",
+    "Limits are tracked independently per client identifier (e.g. API key or IP) and per route.",
+    "The token bucket correctly refills over time rather than only resetting at fixed window boundaries."
+  ],
+  "verificationMethod": "test-suite: run rate-limit tests using controllable fake timers to assert both throttling and refill behavior deterministically.",
+  "groundTruth": "A token-bucket store keyed by (clientId, route) holds current token count and last-refill timestamp; each request computes elapsed time, refills proportionally up to bucket capacity, and allows the request only if at least one token remains, decrementing on success.",
+  "tags": ["rate-limiting", "middleware", "http"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

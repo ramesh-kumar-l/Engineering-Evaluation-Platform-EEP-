@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "architecture-01",
+  "taskVersion": "1.0.0",
+  "title": "Design a module boundary for a new notifications subsystem",
+  "description": "The fixture repository needs a new 'notifications' subsystem (email, SMS, and in-app notifications) that several existing modules (orders, billing, auth) will need to trigger. Produce a design proposal (a written document plus a minimal interface/type skeleton, no full implementation) defining the subsystem's public boundary, how existing modules depend on it, and how new notification channels are added without modifying existing callers.",
+  "category": "architecture",
+  "complexity": "L5",
+  "repository": { "url": "benchmark/fixtures/architecture-01", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "The proposal defines a single public interface that all three existing modules depend on, with no existing module needing to know which concrete channel(s) are configured.",
+    "The proposal explains how a new notification channel is added without modifying any existing caller module.",
+    "The proposal explicitly addresses failure handling (e.g. one channel failing should not fail the others) and where that responsibility lives.",
+    "A minimal TypeScript interface/type skeleton (no business logic) matches the described public boundary and compiles.",
+    "The proposal explicitly states what is out of scope (e.g. delivery-status tracking, retry queues) rather than silently omitting it."
+  ],
+  "verificationMethod": "architecture-check (human-review as primary authority): reviewed against the acceptance criteria above by a human or senior-review process; the interface skeleton is additionally verified to compile.",
+  "groundTruth": "A correct design centers on a single NotificationDispatcher interface exposing a channel-agnostic send(notification) method, with per-channel adapters implementing a shared NotificationChannel interface registered into the dispatcher, isolating per-channel failures from each other and from callers.",
+  "tags": ["architecture", "design", "notifications"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

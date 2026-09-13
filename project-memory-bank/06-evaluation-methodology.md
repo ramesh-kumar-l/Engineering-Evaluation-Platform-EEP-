@@ -47,5 +47,5 @@ each.
 When evaluating a historical repository state, consider repository SHA, task creation date, and
 what evidence was actually available at that historical point. An agent must not receive
 information created after the evaluated task's historical state if that would constitute unfair
-advantage. Full policy to be documented alongside the benchmark in Phase 2 — see
-[[07-benchmark-strategy]].
+advantage. Fully specified alongside the benchmark in Phase 2 — see [[07-benchmark-strategy]]
+§Temporal integrity policy.

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "performance-02",
+  "taskVersion": "1.0.0",
+  "title": "Reduce CLI startup time by lazy-loading heavy modules",
+  "description": "CLI startup time is dominated by eagerly importing several heavy modules (a full templating engine, a charting library) that are only needed for a small subset of subcommands. Convert these to lazy-loaded (dynamic import) so startup time for commonly-used subcommands is not penalized by modules they never use.",
+  "category": "performance",
+  "complexity": "L3",
+  "repository": { "url": "benchmark/fixtures/performance-02", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "Heavy modules are only loaded (imported) when a subcommand that actually needs them is invoked.",
+    "Commands that do not need the heavy modules show a measurably reduced startup time in the provided startup-time benchmark.",
+    "Commands that do need the heavy modules continue to work identically, including their error messages if the heavy module fails to load.",
+    "No circular-import or module-initialization-order issues are introduced by the conversion to dynamic import."
+  ],
+  "verificationMethod": "test-suite: run a startup-time benchmark comparing before/after for both heavy and non-heavy subcommands, plus the full existing CLI test suite for regressions.",
+  "groundTruth": "Static top-level imports of the templating engine and charting library are replaced with dynamic import() calls inside only the specific subcommand handlers that use them, with no other subcommand's code path triggering the import.",
+  "tags": ["performance", "lazy-loading", "cli-startup"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

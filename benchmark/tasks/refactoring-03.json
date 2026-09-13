@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "refactoring-03",
+  "taskVersion": "1.0.0",
+  "title": "Split monolithic UserService class into cohesive modules",
+  "description": "A single UserService class has grown to handle authentication, profile management, notification preferences, and billing status in one file with over a dozen public methods and shared mutable state. Split it into cohesive, independently testable services (AuthService, ProfileService, NotificationPreferencesService, BillingStatusService) composed behind the existing UserService's public method signatures so external callers are unaffected.",
+  "category": "refactoring",
+  "complexity": "L4",
+  "repository": { "url": "benchmark/fixtures/refactoring-03", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "Each new service has a single, clearly-named responsibility with no leftover cross-cutting mutable state.",
+    "The original UserService's public method signatures continue to work, delegating to the new services internally.",
+    "All existing UserService tests pass without modification against the new delegating implementation.",
+    "Each new service has its own focused unit tests independent of the others.",
+    "No new service exceeds a reasonable single-responsibility file size (kept well under the project's file-size convention)."
+  ],
+  "verificationMethod": "architecture-check: confirm responsibility separation and absence of shared mutable state across the new services, combined with a full test-suite run.",
+  "groundTruth": "Four cohesive services are extracted along the described responsibility lines; UserService becomes a thin facade constructing and delegating to the four services, preserving every existing public method's behavior and signature.",
+  "tags": ["refactoring", "architecture", "single-responsibility"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "feature-01",
+  "taskVersion": "1.0.0",
+  "title": "Add CSV export to reporting module",
+  "description": "Add an exportToCsv(rows, columns) capability to the reporting module so report data already available as an array of row objects can be downloaded as a correctly escaped CSV file, matching the column order and headers already defined for the on-screen report.",
+  "category": "feature",
+  "complexity": "L2",
+  "repository": { "url": "benchmark/fixtures/feature-01", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "exportToCsv produces a header row matching the provided column definitions in order.",
+    "Field values containing commas, quotes, or newlines are correctly quoted/escaped per RFC 4180.",
+    "Empty or null field values render as empty CSV fields, not the string 'null' or 'undefined'.",
+    "The exported CSV round-trips through a standard CSV parser back into the original row data."
+  ],
+  "verificationMethod": "test-suite: run the new CSV export unit tests, including RFC 4180 special-character cases and a round-trip parse test.",
+  "groundTruth": "A correct implementation escapes any field containing a comma, quote, or newline by wrapping it in double quotes and doubling internal quotes, joining fields with commas and rows consistently with CRLF or LF.",
+  "tags": ["export", "csv", "reporting"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

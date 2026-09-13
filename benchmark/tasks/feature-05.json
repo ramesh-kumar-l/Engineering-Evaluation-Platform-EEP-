@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "feature-05",
+  "taskVersion": "1.0.0",
+  "title": "Add webhook retry-with-backoff mechanism",
+  "description": "Outbound webhook delivery currently attempts a single POST and gives up on failure. Add retry-with-exponential-backoff (bounded attempts, jitter) so transient receiver failures (5xx, timeout) are retried, while permanent failures (4xx other than 429) are not retried.",
+  "category": "feature",
+  "complexity": "L3",
+  "repository": { "url": "benchmark/fixtures/feature-05", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "A 5xx or timeout response triggers a retry following exponential backoff with jitter, up to a configurable max attempt count.",
+    "A 429 response is retried honoring any Retry-After header if present.",
+    "A non-429 4xx response is not retried and is recorded as a permanent failure.",
+    "After the max attempt count is exhausted, the webhook is recorded as failed with the attempt history preserved."
+  ],
+  "verificationMethod": "test-suite: run retry-behavior tests using fake timers to assert backoff timing, jitter bounds, and the 4xx-vs-5xx retry distinction without real delays.",
+  "groundTruth": "A retry loop classifies the response status into retryable vs terminal, computes the next delay as base * 2^attempt bounded by a max delay and randomized within a jitter window (or the Retry-After value when present), and records each attempt in an attempt-history array.",
+  "tags": ["webhooks", "retry", "reliability"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

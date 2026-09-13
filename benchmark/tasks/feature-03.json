@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "feature-03",
+  "taskVersion": "1.0.0",
+  "title": "Add multi-language i18n support to CLI output",
+  "description": "Add multi-language support to the CLI's user-facing output strings (currently hard-coded English) by introducing a message-catalog lookup keyed by locale, selected via a --locale flag or LANG environment variable, with English as the fallback for missing keys.",
+  "category": "feature",
+  "complexity": "L3",
+  "repository": { "url": "benchmark/fixtures/feature-03", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "All currently hard-coded user-facing strings are routed through the message-catalog lookup.",
+    "Passing --locale=<supported-locale> produces output in that locale for at least two non-English locales.",
+    "A missing translation key falls back to the English string rather than printing a raw key or throwing.",
+    "An unsupported --locale value falls back to English and does not crash the CLI."
+  ],
+  "verificationMethod": "test-suite: run CLI output snapshot tests for each supported locale plus fallback-behavior tests for missing keys and unsupported locales.",
+  "groundTruth": "A locale-keyed dictionary maps message keys to translated strings; a lookup helper resolves the active locale's entry, falling back first to the key's English entry and only then to the raw key if the message system itself is misconfigured.",
+  "tags": ["i18n", "cli", "localization"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

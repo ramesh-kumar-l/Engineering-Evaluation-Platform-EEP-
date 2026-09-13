@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "debugging-03",
+  "taskVersion": "1.0.0",
+  "title": "Incorrect timezone handling in date formatter",
+  "description": "formatDisplayDate(isoString, userTimezone) is intended to render a date in the user's local timezone, but currently formats using the server's local timezone regardless of the userTimezone argument, causing dates to display as the wrong calendar day for users east or west of the server.",
+  "category": "debugging",
+  "complexity": "L2",
+  "repository": { "url": "benchmark/fixtures/debugging-03", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "formatDisplayDate uses userTimezone, not the server's local timezone, for all conversions.",
+    "Dates near the midnight boundary correctly shift to the adjacent calendar day when userTimezone differs from UTC.",
+    "Passing an invalid IANA timezone string throws a clear, typed error rather than silently falling back to UTC.",
+    "All existing snapshot tests are updated to reflect correct, timezone-aware output rather than adjusted to match the buggy behavior."
+  ],
+  "verificationMethod": "test-suite: run date-formatting tests parameterized across at least 4 timezones including UTC+, UTC-, and a half-hour-offset zone.",
+  "groundTruth": "The function ignores the userTimezone parameter and calls a Date formatting API without a timeZone option; the fix threads userTimezone into Intl.DateTimeFormat (or equivalent) options.",
+  "tags": ["timezone", "dates", "i18n"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

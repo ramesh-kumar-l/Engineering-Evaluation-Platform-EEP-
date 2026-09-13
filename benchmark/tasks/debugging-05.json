@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "debugging-05",
+  "taskVersion": "1.0.0",
+  "title": "Undefined crash in global error handler",
+  "description": "The global error handler middleware crashes with 'Cannot read properties of undefined' when an upstream error object lacks a details field, which happens for a subset of validation errors, turning a handled 4xx response into an unhandled 500.",
+  "category": "debugging",
+  "complexity": "L1",
+  "repository": { "url": "benchmark/fixtures/debugging-05", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "The error handler never throws regardless of which optional fields are present on the incoming error object.",
+    "Errors without a details field still produce a well-formed response body with a sensible default.",
+    "Errors with a details field continue to include it unchanged in the response.",
+    "A regression test covering an error object missing each optional field individually passes."
+  ],
+  "verificationMethod": "test-suite: run the error-handler unit tests, including the new missing-field regression cases.",
+  "groundTruth": "The handler accesses error.details.code without checking that details is defined; the fix adds a guard (optional chaining plus a default) before accessing nested fields.",
+  "tags": ["error-handling", "null-safety"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

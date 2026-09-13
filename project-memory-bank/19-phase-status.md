@@ -3,8 +3,8 @@
 | Phase | Status |
 |---|---|
 | 0 — Project Foundation | Complete |
-| 1 — Evaluation Contract | Complete, pending user approval to proceed |
-| 2 — Benchmark V1 | Not started |
+| 1 — Evaluation Contract | Complete |
+| 2 — Benchmark V1 | Complete, pending user approval to proceed |
 | 3 — Experiment Harness | Not started |
 | 4 — Deterministic Evaluation | Not started |
 | 5 — Metrics | Not started |
@@ -17,5 +17,5 @@
 | 12 — External Reproduction | Not started |
 | 13 — CI / GitHub Integration | Not started |
 
-Per the strict phase gate ([[00-project-charter]] §Working protocol), Phase 2 does not begin
-until the user explicitly approves proceeding past Phase 1.
+Per the strict phase gate ([[00-project-charter]] §Working protocol), Phase 3 does not begin
+until the user explicitly approves proceeding past Phase 2.

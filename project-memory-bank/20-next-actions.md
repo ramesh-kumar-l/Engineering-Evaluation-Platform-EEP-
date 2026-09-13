@@ -1,17 +1,19 @@
 # 20 — Next Actions
 
-1. **Immediate:** await explicit user approval to begin Phase 2.
-2. **Phase 2 (Benchmark V1), once approved:**
-   - Design the ~30-task benchmark per [[07-benchmark-strategy]]'s category/complexity
-     distribution, using the existing `taskSchema` (`src/domain/task/task.schema.ts`) as the
-     storage format — extend it (bump `TASK_SCHEMA_VERSION`) only if a real gap appears.
-   - Establish ground truth and a verification method per task, consistent with
-     [[06-evaluation-methodology]]'s "tests pass" vs "outcome correct" distinction.
-   - Fully specify the temporal-integrity policy referenced in [[07-benchmark-strategy]] and
-     [[06-evaluation-methodology]].
-   - Decide where benchmark task files live on disk (likely a `benchmark/` directory, one file
-     per task) and how they're loaded/validated against `taskSchema` at load time.
+1. **Immediate:** await explicit user approval to begin Phase 3.
+2. **Phase 3 (Experiment Harness), once approved:**
+   - Author real fixture source code under `benchmark/fixtures/<id>/` for each of the 30 tasks
+     (currently only a README placeholder exists), and assign each task's `repository.commitSha`
+     a real value, replacing the `"unpinned"` sentinel — see ADR-006 in [[14-decisions]].
+   - Build environment isolation for running an agent against a fixture (process/container
+     boundary — decide which, document as an ADR).
+   - Implement a concrete `Agent` adapter (interface already defined:
+     `src/domain/providers/agent.ts`) and a trivial/native baseline `ContextProvider`
+     (`src/domain/providers/context-provider.ts`) to prove the harness end-to-end before Phase 6's
+     real ECC adapter.
+   - Implement trace capture (`Trace`/`Action`/`Decision` schemas already exist — Phase 1) during
+     a run.
    - Update `implementation-status.md`, `active-context.md`, [[18-current-state]], and
-     [[19-phase-status]] at the end of Phase 2.
+     [[19-phase-status]] at the end of Phase 3.
 
-Do not start Phase 2 implementation before approval is given (master prompt §40).
+Do not start Phase 3 implementation before approval is given (master prompt §40).

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "feature-06",
+  "taskVersion": "1.0.0",
+  "title": "Implement plugin system for custom validators",
+  "description": "Introduce an extensibility point so consumers can register custom field validators without modifying the core validation module: a plugin registers a named validator function and a schema declaration can reference it by name, with the core module resolving and invoking registered plugins at validation time.",
+  "category": "feature",
+  "complexity": "L4",
+  "repository": { "url": "benchmark/fixtures/feature-06", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "Consumers can register a named custom validator without editing the core validation module's source.",
+    "A schema field referencing an unregistered validator name fails fast with a clear configuration error at schema-build time, not silently at request time.",
+    "Built-in validators continue to work unchanged after the plugin mechanism is introduced.",
+    "Two independently registered plugins do not interfere with each other's state.",
+    "Plugin validators receive the same context (field value, full object, path) as built-in validators."
+  ],
+  "verificationMethod": "test-suite: run plugin-registration tests plus the full existing validator test suite to confirm no regression in built-ins.",
+  "groundTruth": "A validator registry (name to function map) is consulted alongside built-in validators; schema construction resolves every referenced validator name against the registry immediately and throws a configuration error for any unresolved name before any request is validated.",
+  "tags": ["extensibility", "validation", "plugin-architecture"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "debugging-06",
+  "taskVersion": "1.0.0",
+  "title": "Deadlock in worker pool task queue",
+  "description": "A fixed-size worker pool that processes tasks with inter-task dependencies (a task can enqueue a dependent follow-up task and wait for it) deadlocks under load once all workers are blocked waiting on follow-up tasks that have nowhere to run, because the follow-up tasks sit in the same bounded queue behind the blocked workers' own completion.",
+  "category": "debugging",
+  "complexity": "L4",
+  "repository": { "url": "benchmark/fixtures/debugging-06", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "A workload where every worker simultaneously enqueues and awaits a dependent task completes without deadlocking.",
+    "Pool size and overall queue bounds remain configurable and are not simply removed to avoid the deadlock.",
+    "The provided deadlock-reproduction test, which previously hung, now completes within a defined timeout.",
+    "Throughput on the existing non-dependent workload benchmark does not regress by more than a documented small margin."
+  ],
+  "verificationMethod": "test-suite: run the deadlock-reproduction test under a hard timeout (must complete, not time out) plus the existing throughput benchmark for regression comparison.",
+  "groundTruth": "The fix introduces a dedicated priority/reentrant path (or a separate small pool) for dependent follow-up tasks so they are never starved behind the very workers awaiting them, avoiding the circular wait condition.",
+  "tags": ["concurrency", "deadlock", "worker-pool"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

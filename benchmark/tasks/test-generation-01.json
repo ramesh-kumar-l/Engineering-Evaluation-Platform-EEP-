@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "test-generation-01",
+  "taskVersion": "1.0.0",
+  "title": "Write unit tests for untested date utility",
+  "description": "A small date-utility module (addBusinessDays, isWeekend, formatShortDate) has no test coverage at all. Write a thorough unit test suite covering typical inputs, weekend/holiday boundary conditions, and invalid input handling, without modifying the module's implementation.",
+  "category": "test-generation",
+  "complexity": "L1",
+  "repository": { "url": "benchmark/fixtures/test-generation-01", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "Each exported function has direct unit tests covering at least one typical case and at least one boundary case.",
+    "addBusinessDays is tested across a range that crosses at least one weekend.",
+    "Invalid inputs (e.g. non-Date arguments) are tested for their actual current behavior, not an assumed behavior.",
+    "The new test suite achieves full line coverage of the utility module.",
+    "No production code in the utility module is modified."
+  ],
+  "verificationMethod": "test-suite: run the new test file and confirm it passes against the unmodified module, plus a coverage check confirming full line coverage of the module.",
+  "groundTruth": "A complete test file exercises every exported function against representative and boundary inputs, asserting on the module's actual current output rather than idealized expected behavior, since the task is coverage, not a behavior fix.",
+  "tags": ["testing", "coverage", "date-utility"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "debugging-01",
+  "taskVersion": "1.0.0",
+  "title": "Off-by-one error in pagination utility",
+  "description": "The paginate(items, pageSize, pageNumber) utility in the fixture repository returns one fewer item than expected on the final page and occasionally omits the last item entirely when the total count is an exact multiple of pageSize. Diagnose the off-by-one error and correct the slicing boundaries without changing the function's public signature.",
+  "category": "debugging",
+  "complexity": "L1",
+  "repository": { "url": "benchmark/fixtures/debugging-01", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "paginate() returns exactly pageSize items for every full page.",
+    "The final (possibly partial) page includes every remaining item, with none omitted.",
+    "When totalItems is an exact multiple of pageSize, no extra empty page is produced.",
+    "Existing callers of paginate() require no changes to compile or pass."
+  ],
+  "verificationMethod": "test-suite: run the fixture's existing pagination test suite plus the added edge-case tests for exact-multiple and single-item-remainder inputs; all must pass.",
+  "groundTruth": "The bug is an inclusive-upper-bound slice at the page boundary; the fix uses an exclusive end index computed as start + pageSize, clamped to items.length.",
+  "tags": ["pagination", "off-by-one", "utility"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

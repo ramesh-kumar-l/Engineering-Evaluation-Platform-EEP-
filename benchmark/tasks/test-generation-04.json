@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "test-generation-04",
+  "taskVersion": "1.0.0",
+  "title": "Add property-based tests for an arithmetic expression parser",
+  "description": "A small expression parser (arithmetic with +, -, *, /, parentheses) has example-based tests only. Add property-based tests that generate random valid expressions and assert invariants (parse-then-evaluate matches a reference evaluator, parse is deterministic, whitespace-insensitivity) rather than fixed input/output pairs.",
+  "category": "test-generation",
+  "complexity": "L3",
+  "repository": { "url": "benchmark/fixtures/test-generation-04", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "A generator produces syntactically valid random arithmetic expressions of varying depth.",
+    "A property asserts that parsing the same expression twice yields structurally equal ASTs.",
+    "A property asserts that evaluating the parsed AST matches a simple reference evaluator for generated expressions without division by zero.",
+    "A property asserts that adding or removing insignificant whitespace does not change the parsed AST.",
+    "Property tests run a sufficient number of generated cases (at least 100) per run and report a reproducible seed on failure."
+  ],
+  "verificationMethod": "test-suite: run the property-based test suite and confirm all properties hold across the configured number of generated cases, with a fixed/reported seed for reproducibility.",
+  "groundTruth": "Using a property-testing approach, the suite generates random valid expressions, and the three invariants (determinism, evaluator agreement, whitespace-insensitivity) hold against the existing parser implementation without any parser changes.",
+  "tags": ["testing", "property-based", "parser"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

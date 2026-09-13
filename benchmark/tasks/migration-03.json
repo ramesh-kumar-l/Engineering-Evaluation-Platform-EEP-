@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "migration-03",
+  "taskVersion": "1.0.0",
+  "title": "Migrate REST endpoint to a versioned API contract",
+  "description": "An existing unversioned REST endpoint (/users/:id) needs to become /v2/users/:id with a changed response shape (nested profile object instead of flat fields), while the original unversioned endpoint must continue serving the old flat response shape unchanged for existing clients during a transition period.",
+  "category": "migration",
+  "complexity": "L3",
+  "repository": { "url": "benchmark/fixtures/migration-03", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "GET /v2/users/:id returns the new nested response shape for existing fixture data.",
+    "GET /users/:id (unversioned) continues to return the original flat response shape unchanged.",
+    "Both endpoints share the same underlying data-fetching logic rather than duplicating the query.",
+    "A newly-added field only appears in the v2 response, not the legacy response, unless explicitly required otherwise.",
+    "Existing tests for the unversioned endpoint pass unchanged; new tests cover the v2 endpoint's shape."
+  ],
+  "verificationMethod": "test-suite: run existing unversioned-endpoint tests unchanged plus new v2-endpoint tests asserting the nested shape.",
+  "groundTruth": "A shared internal fetch function returns a canonical user record; two thin response-shaping layers (legacy flat mapper, v2 nested mapper) sit on top of the same fetch, registered on their respective routes.",
+  "tags": ["migration", "api-versioning", "rest"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

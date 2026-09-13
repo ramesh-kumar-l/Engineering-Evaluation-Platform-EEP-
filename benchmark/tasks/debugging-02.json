@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "debugging-02",
+  "taskVersion": "1.0.0",
+  "title": "Race condition in async cache invalidation",
+  "description": "A cache layer that memoizes results of an expensive async lookup has a race condition: concurrent calls for the same key that arrive before the first in-flight request resolves can each trigger a duplicate upstream call, and in rare interleavings a stale value is written after a newer invalidation. Fix the race without introducing a global lock that would serialize unrelated keys.",
+  "category": "debugging",
+  "complexity": "L4",
+  "repository": { "url": "benchmark/fixtures/debugging-02", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "Concurrent get() calls for the same uncached key trigger exactly one upstream fetch.",
+    "An invalidate(key) call issued while a fetch for that key is in flight results in the cache not serving the stale value once the in-flight fetch resolves.",
+    "get() calls for different keys are never serialized against each other.",
+    "The provided concurrency stress test (simulated interleavings) passes deterministically across repeated runs."
+  ],
+  "verificationMethod": "test-suite: run the concurrency stress test with simulated interleavings (fake timers / deferred promises) at least 50 times without flaking; plus repository-invariant check that no lock spans multiple keys.",
+  "groundTruth": "Root cause is a missing in-flight promise map keyed per cache key combined with an epoch/version counter bumped on invalidate(); the fix stores an in-flight Promise per key and checks the epoch captured at fetch-start before writing the resolved value into the cache.",
+  "tags": ["concurrency", "cache", "race-condition"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

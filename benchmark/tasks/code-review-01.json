@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "code-review-01",
+  "taskVersion": "1.0.0",
+  "title": "Review a change-password endpoint diff for security and correctness issues",
+  "description": "Given a provided diff that adds a new 'change password' endpoint, perform a thorough code review identifying security and correctness issues (e.g. missing current-password verification, missing rate limiting, logging the new password, missing input validation, timing-unsafe comparison) and produce a structured review listing each issue, its severity, and a concrete suggested fix.",
+  "category": "code-review",
+  "complexity": "L2",
+  "repository": { "url": "benchmark/fixtures/code-review-01", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "The review identifies the missing current-password verification before allowing a change.",
+    "The review identifies any instance where a plaintext password is written to logs.",
+    "The review identifies the use of a non-constant-time comparison for any secret/password comparison.",
+    "The review identifies missing input validation on the new password (e.g. minimum complexity/length) if absent from the diff.",
+    "Each identified issue includes a severity rating and a concrete, actionable suggested fix, not just a description of the problem."
+  ],
+  "verificationMethod": "human-review (with llm-judge as a secondary, non-authoritative cross-check): the produced review is checked against a fixed reviewer checklist of the known-injected issues in the fixture diff.",
+  "groundTruth": "The fixture diff contains five deliberately injected issues: missing current-password check, plaintext password logging, non-constant-time comparison, missing complexity validation, and missing rate limiting on the endpoint; a complete review identifies all five.",
+  "tags": ["code-review", "security", "authentication"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

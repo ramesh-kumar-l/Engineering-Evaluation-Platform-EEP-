@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "performance-01",
+  "taskVersion": "1.0.0",
+  "title": "Fix N+1 query pattern in report generator",
+  "description": "The report generator fetches a list of orders and then, for each order individually, issues a separate query to fetch its line items, resulting in an N+1 query pattern that dominates report generation time for large order sets. Fix it to use a single batched fetch for line items across all orders in the report.",
+  "category": "performance",
+  "complexity": "L3",
+  "repository": { "url": "benchmark/fixtures/performance-01", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "Generating a report for N orders issues a constant, small number of queries regardless of N (not one query per order for line items).",
+    "The report's output content is identical to before the optimization for the same input data.",
+    "A performance test asserts the query count for a 200-order report is below a fixed small threshold, where it previously scaled linearly with order count.",
+    "Existing report-content tests pass unchanged."
+  ],
+  "verificationMethod": "test-suite: assert the query-count threshold for a large order set via an instrumented performance test, plus existing content-correctness tests unchanged.",
+  "groundTruth": "Line items are fetched once via a single query filtered by the full set of order IDs (WHERE order_id IN (...)) and then grouped in memory by order ID before being attached to each order in the report.",
+  "tags": ["performance", "n-plus-one", "database"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}

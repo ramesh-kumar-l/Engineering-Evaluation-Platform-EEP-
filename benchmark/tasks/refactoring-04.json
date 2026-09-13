@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "refactoring-04",
+  "taskVersion": "1.0.0",
+  "title": "Introduce dependency injection to remove hard-coded singletons",
+  "description": "Several modules directly import and use a hard-coded singleton database client and a hard-coded singleton logger, making them impossible to unit test in isolation. Introduce constructor-based dependency injection for these dependencies while preserving a default-wiring path so existing top-level application startup code requires minimal changes.",
+  "category": "refactoring",
+  "complexity": "L4",
+  "repository": { "url": "benchmark/fixtures/refactoring-04", "commitSha": "unpinned" },
+  "acceptanceCriteria": [
+    "Affected modules accept their database client and logger as constructor/factory parameters rather than importing singletons directly.",
+    "A default-wiring factory function preserves the previous singleton-based behavior for application startup.",
+    "Unit tests can now substitute a fake database client and logger without any module-level mocking of imports.",
+    "All existing integration tests pass using the default-wiring factory.",
+    "No remaining direct import of the singleton client or logger exists inside the affected modules' business logic."
+  ],
+  "verificationMethod": "diff-analysis: confirm no remaining direct singleton imports in the affected modules, combined with a test-suite run of both new isolated unit tests and existing integration tests.",
+  "groundTruth": "Affected modules are converted to accept dependencies via their constructor or a factory function; a createDefaultX() factory in the composition root wires the real singletons for production use, and tests use a separate factory call with fakes.",
+  "tags": ["refactoring", "dependency-injection", "testability"],
+  "createdAt": "2026-09-13T00:00:00Z"
+}
