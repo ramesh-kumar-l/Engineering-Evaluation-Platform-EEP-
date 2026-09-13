@@ -213,3 +213,61 @@ Format: Decision / Context / Options / Chosen approach / Reason / Trade-offs / C
   indistinguishable from `AGENT_FAILURE`); `src/evaluation/evaluateRun.ts`'s hook guarantees this
   by construction (`runVerifiers()` catches every verifier's errors internally).
 - **Status:** Accepted.
+
+## ADR-009: Metrics computed only where a real data source exists; single-run definition before multi-run aggregation
+
+- **Context:** Phase 5 (Metrics) needed to populate the `Metric` schema with real values for the 5
+  primary + 17 secondary metric names named in [[08-metrics]], computed from the
+  `Run`/`Trace`/`Outcome`/`Verification`/`Evidence`/`ContextArtifact` records Phases 3-4 produce,
+  and to decide how metrics aggregate across repeated runs of the same Task×Condition pair ahead
+  of Phase 7's full statistical rigor.
+- **Options considered (coverage):** (a) implement all 22 named metrics now, approximating the
+  ones with no real data source (e.g. `evidence-recall` with no ground-truth evidence set,
+  `risk-classification` with no risk field on `Task`); (b) implement only the metrics honestly
+  computable from data that already exists, and explicitly document the rest as not-yet-computable
+  rather than fabricating a placeholder value.
+- **Chosen approach (coverage):** (b). 14 of 22 metrics are implemented — all 5 primary
+  (`task-success`, `engineering-quality`, `time-to-correct-outcome`, `context-efficiency`,
+  `human-intervention`) and 9 secondary (`context-tokens`, `tool-calls`, `agent-turns`,
+  `files-read`, `files-changed`, `retries`, `failed-attempts`, `provenance-completeness`,
+  `verification-completeness`). `evidence-recall`, `evidence-precision`, `evidence-authority`,
+  `evidence-freshness`, `context-redundancy`, `regression-rate`, `risk-classification`, and
+  `decision-confidence` are not computed — each needs a data source (a curated "required evidence"
+  set, a source-authority model, cross-run history, a `Task.risk` field, a `Decision.confidence`
+  field) that does not exist yet.
+- **Reason (coverage):** Fabricating a value for a metric with no real basis would silently
+  misrepresent the system under test — the same integrity principle already governing
+  [[00-project-charter]] and ADR-008's "throw rather than report a false negative" rule. Two
+  metrics needed an honest proxy rather than their literal memory-bank definition, and that
+  substitution is documented in code, not hidden: `engineering-quality` (full definition needs
+  static-analysis/security-check/architecture-check verifiers that don't exist yet — Phase 5
+  computes it as "fraction of executed verifications that passed," which is real, non-fabricated
+  data) and `context-efficiency` (the "usefulness" side of the ratio has no ground truth until
+  ECC/Phase 6 provides curated context to compare against — Phase 5 approximates usefulness as
+  "did the run succeed," expressed per 1000 context tokens).
+- **Options considered (aggregation):** (a) build full statistical machinery now (confidence
+  intervals, significance testing) even though Phase 5 only produces single-run data; (b) define
+  and unit-test a single run's metric value correctly first, and ship only a lightweight
+  mean/median/sample-stddev summarizer (`aggregateMetricsByName()`) as a preview, explicitly
+  deferring real statistical rigor to Phase 7 (Experimental Analysis).
+- **Chosen approach (aggregation):** (b). `src/metrics/aggregateMetrics.ts` groups a list of
+  `Metric` records by `name` and reports count/mean/median/sample-stddev; it does not know about
+  Task/Condition identity (a `Metric` only carries `runId`) and performs no significance testing —
+  callers are responsible for only passing metrics from the same Task×Condition pair.
+- **Reason (aggregation):** [[13-roadmap]] scopes "aggregation" into Phase 5 and "repeated runs"/
+  full analysis into Phase 7 separately; building rigorous statistics before there is more than a
+  handful of real repeated runs to validate against would be premature infrastructure, the same
+  anti-pattern ADR-004 already rejects.
+- **Trade-offs:** The 8 unimplemented secondary metrics remain enum-only (matching the same
+  pattern ADR-008 already established for unimplemented `Verifier` methods); a reader of
+  [[08-metrics]] alone (without also reading [[implementation-status]]) could mistakenly assume
+  all 22 are live.
+- **Consequences:** `src/harness/runHarness.ts`'s `HarnessRunOutcome` gained an additive, optional
+  `contextArtifact` field (the full `ContextArtifact`, not just its id) and
+  `src/evaluation/evaluateRun.ts`'s `EvaluatedRunOutcome` gained an additive `executionErrors`
+  field — both were already computed internally and discarded; Phase 5's `context-tokens`/
+  `context-efficiency` and `verification-completeness` metrics need them. Neither change altered
+  any existing field, and all pre-existing Phase 3/4 tests passed unchanged. Adding a metric for a
+  now-existing data source later is a new file under `src/metrics/`, following the same
+  registry-free "one function per concern" pattern as `primaryMetrics.ts`/`secondaryMetrics.ts`.
+- **Status:** Accepted.

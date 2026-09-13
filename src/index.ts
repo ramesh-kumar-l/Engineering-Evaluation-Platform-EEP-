@@ -5,3 +5,4 @@ export * from './domain/index.js';
 export * from './benchmark/index.js';
 export * from './harness/index.js';
 export * from './evaluation/index.js';
+export * from './metrics/index.js';

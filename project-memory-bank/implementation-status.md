@@ -46,7 +46,7 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `loadTasks.ts` (read + validate `benchmark/tasks/*.json` against `taskSchema`) | Done |
 | `index.ts` (barrel) | Done |
 
-## src/harness/ (Phase 3, extended Phase 4)
+## src/harness/ (Phase 3, extended Phase 4/5)
 
 | Module | Status |
 |---|---|
@@ -54,7 +54,7 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `support/listFiles.ts` (shared recursive file listing, capped) | Done |
 | `providers/nativeContextProvider.ts` (`NativeContextProvider`) | Done |
 | `agents/nativeAgent.ts` (`NativeAgent`) | Done |
-| `runHarness.ts` (`executeRun` — Task+Condition+Agent+ContextProvider → Run+Trace; now also carries an optional `onBeforeCleanup` hook, Phase 4) | Done |
+| `runHarness.ts` (`executeRun` — Task+Condition+Agent+ContextProvider → Run+Trace; carries an optional `onBeforeCleanup` hook (Phase 4) and now also returns the full `contextArtifact` on `HarnessRunOutcome` (Phase 5, ADR-009)) | Done |
 | `index.ts` (barrel) | Done |
 
 ## src/evaluation/ (Phase 4)
@@ -71,6 +71,20 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `index.ts` (barrel) | Done |
 | Verifiers for `static-analysis`, `repository-invariant`, `acceptance-criteria-check`, `security-check`, `architecture-check`, `human-review`, `llm-judge` | Not started — add as a fixture needs them |
 
+## src/metrics/ (Phase 5)
+
+| Module | Status |
+|---|---|
+| `estimateTokens.ts` (~4-char/token fallback estimate) | Done |
+| `metricHelpers.ts` (`buildMetric`, `durationMs`) | Done |
+| `metricsInput.ts` (`RunMetricsInput` structural type) | Done |
+| `primaryMetrics.ts` (all 5 primary metrics) | Done |
+| `secondaryMetrics.ts` (9 of 17 secondary metrics) | Done |
+| `computeMetrics.ts` (`computeRunMetrics` — the Phase 5 entry point) | Done |
+| `aggregateMetrics.ts` (`aggregateMetricsByName` — mean/median/stddev, non-statistical) | Done |
+| `index.ts` (barrel) | Done |
+| 8 secondary metrics: evidence-recall/-precision/-authority/-freshness, context-redundancy, regression-rate, risk-classification, decision-confidence | Not started — no data source exists yet, see ADR-009 |
+
 ## benchmark/ (Phase 2, updated Phase 3)
 
 | Item | Status |
@@ -83,14 +97,14 @@ Update this whenever a major feature/module is finished, not only at phase bound
 ## Not started
 
 Fixture repositories + real commit pins for 27 of 30 tasks (incremental backlog), verifiers for
-5 of the 7 remaining `verificationMethod` enum values (add as needed), metrics computation
-(Phase 5), a real solving agent and ECC adapter (Phase 6), CLI, container/process-level
-sandboxing (open risk, see [[16-risks]]), reporting/dashboard (Phase 9-10).
+7 of the 9 `verificationMethod` enum values (add as needed), 8 of 22 named metrics with no data
+source yet (ADR-009), a real solving agent and ECC adapter (Phase 6), CLI, metric/artifact
+persistence to disk, container/process-level sandboxing (open risk, see [[16-risks]]),
+reporting/dashboard (Phase 9-10).
 
 ## Verification snapshot
 
-Last run: `npm run build && npm test && npm run lint` — clean build, 89/89 tests passing across
-31 files, zero lint errors. Confirmed no test files leak into `dist/` after `rm -rf dist && npm
-run build`. The compiled `dist/` evaluation pipeline was also manually run end-to-end against the
-real `debugging-01` fixture (produced `Outcome.status: TASK_FAILURE` as expected for `NativeAgent`).
+Last run: `npm run build && npm test && npm run lint` — clean build, 116/116 tests passing across
+45 files, zero lint errors. Confirmed no test files leak into `dist/` after `rm -rf dist && npm
+run build`.
 Re-run this before trusting this ledger; it is a snapshot, not a live status.

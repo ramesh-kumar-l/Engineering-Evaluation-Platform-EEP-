@@ -7,6 +7,7 @@ import type { Agent } from '../domain/providers/agent.js';
 import type { ContextProvider } from '../domain/providers/context-provider.js';
 import { runSchema, type Run } from '../domain/run/run.schema.js';
 import type { Task } from '../domain/task/task.schema.js';
+import type { ContextArtifact } from '../domain/evidence/context-artifact.schema.js';
 import { traceSchema, type Trace } from '../domain/trace/trace.schema.js';
 import { createIsolatedWorkspace, FixtureNotFoundError } from './workspace.js';
 
@@ -49,6 +50,8 @@ export interface HarnessRunConfig {
 export interface HarnessRunOutcome {
   readonly run: Run;
   readonly trace: Trace;
+  /** The full context payload handed to the agent, when a workspace was available — Phase 5 metrics read this for context-cost measurement without re-deriving it from the Trace's `contextArtifactId`. */
+  readonly contextArtifact?: ContextArtifact;
 }
 
 /**
@@ -71,6 +74,7 @@ export async function executeRun(
   let actions: Trace['actions'] = [];
   let decisions: Trace['decisions'] = [];
   let contextArtifactId: string | undefined;
+  let contextArtifact: ContextArtifact | undefined;
 
   const workspace = await createIsolatedWorkspace(fixturePath).catch((error: unknown) => {
     if (error instanceof FixtureNotFoundError) return undefined;
@@ -87,6 +91,7 @@ export async function executeRun(
         repositoryPath: workspace.path,
       });
       contextArtifactId = contextResult.contextArtifact.id;
+      contextArtifact = contextResult.contextArtifact;
 
       const agentResult = await deps.agent.run({
         runId,
@@ -148,5 +153,5 @@ export async function executeRun(
     finishedAt: endedAt,
   });
 
-  return { run, trace };
+  return { run, trace, contextArtifact };
 }

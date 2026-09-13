@@ -21,6 +21,8 @@ export interface EvaluatedRunOutcome extends HarnessRunOutcome {
   readonly outcome: Outcome;
   readonly verifications: Verification[];
   readonly evidence: Evidence[];
+  /** Verifiers that applied but could not execute — Phase 5 metrics use this for verification-completeness. */
+  readonly executionErrors: RunVerifiersResult['executionErrors'];
 }
 
 const EMPTY_VERIFIER_RESULT: RunVerifiersResult = {
@@ -46,7 +48,7 @@ export async function executeEvaluatedRun(
 
   let verifierResult: RunVerifiersResult = EMPTY_VERIFIER_RESULT;
 
-  const { run, trace } = await executeRun(
+  const { run, trace, contextArtifact } = await executeRun(
     task,
     {
       ...deps,
@@ -81,8 +83,10 @@ export async function executeEvaluatedRun(
   return {
     run,
     trace,
+    contextArtifact,
     outcome,
     verifications: verifierResult.verifications,
     evidence: verifierResult.evidence,
+    executionErrors: verifierResult.executionErrors,
   };
 }

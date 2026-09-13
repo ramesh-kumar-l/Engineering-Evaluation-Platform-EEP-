@@ -16,7 +16,7 @@ mitigated since no evaluation logic exists).
 | Privacy / secrets exposure | Open | Mitigation: local-first execution, redaction — [[11-security]]. |
 | Excessive evaluation cost (time/compute) | Open | To be monitored once the harness (Phase 3) runs real experiments. |
 | Dashboard complexity growing ahead of data-model maturity | Open | Mitigation: dashboard explicitly sequenced after Phase 9 — [[12-dashboard-strategy]]. |
-| False confidence in small-sample results | Open | Mitigation: statistical discipline — [[06-evaluation-methodology]]. |
+| False confidence in small-sample results | Open | Mitigation: statistical discipline — [[06-evaluation-methodology]]; Phase 5's `aggregateMetricsByName()` deliberately stays non-statistical (mean/median/stddev only, no significance testing) rather than implying rigor it can't back up — see [[phases/phase-05]], ADR-009. |
 | Environment isolation is filesystem-copy only, not container/process sandboxed (ADR-007) | Open | Acceptable while agents only read fixtures (Phase 3); sharpened in Phase 4 — `testSuiteVerifier` now spawns real child processes with a wall-clock timeout but no CPU/memory limits, still acceptable for small, trusted, self-authored fixtures with no dependencies; revisit before any agent executes untrusted generated commands — [[phases/phase-03]], [[phases/phase-04]]. |
 
 Add new risks as they're discovered; never delete a risk row, mark it `Closed` with a reason.

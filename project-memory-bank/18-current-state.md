@@ -1,6 +1,6 @@
 # 18 — Current State
 
-Last updated: 2026-09-13 (Phase 4 complete).
+Last updated: 2026-09-13 (Phase 5 complete).
 
 ## What exists
 
@@ -29,6 +29,15 @@ Last updated: 2026-09-13 (Phase 4 complete).
   both `SUCCESS` (via a test-only agent that genuinely fixes `debugging-01`'s bug) and
   `TASK_FAILURE` (via `NativeAgent`, which never fixes anything). See [[phases/phase-04]] and
   ADR-008 in [[14-decisions]].
+- **Metrics (`src/metrics/`, Phase 5):** `computeRunMetrics()` — the entry point turning a
+  completed evaluated run into an array of schema-valid `Metric` records. All 5 primary metrics
+  (`task-success`, `engineering-quality`, `time-to-correct-outcome`, `context-efficiency`,
+  `human-intervention`) plus 9 of 17 secondary metrics are implemented; 8 secondary metrics
+  remain unimplemented because no real data source exists for them yet (evidence recall/precision/
+  authority/freshness, context-redundancy, regression-rate, risk-classification,
+  decision-confidence — see ADR-009). `aggregateMetricsByName()` gives a lightweight, explicitly
+  non-statistical mean/median/stddev summary across repeated runs, previewing (not pre-empting)
+  Phase 7's full analysis. See [[phases/phase-05]] and ADR-009 in [[14-decisions]].
 - 3 of the 30 benchmark tasks (`debugging-01`, `feature-01`, `refactoring-01`) have real,
   runnable fixture source code under `benchmark/fixtures/<id>/` and a real pinned
   `repository.commitSha`; the other 27 remain `"unpinned"` (tracked backlog, not a defect).
@@ -46,8 +55,11 @@ Last updated: 2026-09-13 (Phase 4 complete).
   `security-check`, `architecture-check`, `human-review`, `llm-judge` — only `test-suite` and
   `diff-analysis` exist so far, sufficient for the 3 fixtures currently authored; the
   `Verifier` interface makes adding one a single new file (see [[phases/phase-04]]).
-- No metrics computation (the `Metric` schema and name enum exist, computation does not) —
-  Phase 5.
+- 8 of 22 named metrics (evidence recall/precision/authority/freshness, context-redundancy,
+  regression-rate, risk-classification, decision-confidence) — no data source exists for them
+  yet, see ADR-009. No metric persistence to disk (metrics are computed in-memory; a CLI/storage
+  layer to write them alongside `Run`/`Trace`/`Outcome` artifacts doesn't exist — no CLI exists at
+  all yet).
 - No real solving agent (only the deliberately inert `NativeAgent` baseline and Phase 4's
   test-only `FixPaginationAgent`, which never leaves `src/evaluation/evaluateRun.test.ts`) and no
   ECC adapter or integration — Phase 6.
@@ -59,7 +71,6 @@ Last updated: 2026-09-13 (Phase 4 complete).
 
 ## Verification performed
 
-`npm install && npm run build && npm test && npm run lint` — 89 tests passing across 31 test
-files, clean build, clean lint. No test files leak into `dist/`. The compiled `dist/` evaluation
-pipeline was also manually exercised end-to-end against the real `debugging-01` fixture. See
-[[phases/phase-04]] for details.
+`npm install && npm run build && npm test && npm run lint` — 116 tests passing across 45 test
+files, clean build, clean lint. No test files leak into `dist/`. See [[phases/phase-05]] for
+details.

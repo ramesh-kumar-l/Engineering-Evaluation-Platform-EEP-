@@ -11,5 +11,11 @@ here; metric *computation logic* is Phase 5 work. Tests: `src/domain/metric/metr
 Per [[08-metrics]] §Anti-goal, this schema deliberately has no composite-score field — every
 metric record stays individually drillable to its run.
 
+**Computed by (Phase 5):** `src/metrics/computeMetrics.ts`'s `computeRunMetrics()`, using
+`primaryMetrics.ts` (all 5 primary metrics) and `secondaryMetrics.ts` (9 of 17 secondary metrics
+— the other 8 have no data source yet). `aggregateMetrics.ts`'s `aggregateMetricsByName()` gives a
+lightweight, explicitly non-statistical mean/median/stddev summary across repeated runs of the
+same Task×Condition pair. See [[phases/phase-05]] and ADR-009 in [[14-decisions]].
+
 This file intentionally does not restate fields — see [[10-reproducibility]] §Independent
 versioning axes.
