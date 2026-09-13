@@ -88,6 +88,21 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `index.ts` (barrel) | Done |
 | 8 secondary metrics: evidence-recall/-precision/-authority/-freshness, context-redundancy, regression-rate, risk-classification, decision-confidence | Not started — no data source exists yet, see ADR-009 |
 
+## src/analysis/ (Phase 7)
+
+| Module | Status |
+|---|---|
+| `stats.ts` (generic descriptive stats, shared `InsufficientSampleSizeError`) | Done |
+| `tDistribution.ts` (exact published t-table + z fallback, 90/95/99% only, ADR-011) | Done |
+| `confidenceInterval.ts` (`meanConfidenceInterval` — Student's t; `proportionConfidenceInterval` — Wilson) | Done |
+| `effectSize.ts` (`cohensD`, `cohensH`, magnitude classification) | Done |
+| `groupBy.ts` (generic grouping helper) | Done |
+| `analysisInput.ts` (`RunAnalysisRecord`, `metricKindFor`, `extractMetricValues`) | Done |
+| `repeatedRunAnalysis.ts` (`summarizeGroup`, `compareConditions` — both return `insufficient-data` rather than throwing) | Done |
+| `groupedAnalysis.ts` (`analyzeRepeatedRuns` — the Phase 7 entry point: overall + by-category + by-complexity) | Done |
+| `index.ts` (barrel) | Done |
+| Failure analysis (4th item in Phase 7's roadmap scope) | Not started — not requested this round, see [[phases/phase-07]] |
+
 ## benchmark/ (Phase 2, updated Phase 3)
 
 | Item | Status |
@@ -102,14 +117,15 @@ Update this whenever a major feature/module is finished, not only at phase bound
 Fixture repositories + real commit pins for 27 of 30 tasks (incremental backlog), verifiers for
 7 of the 9 `verificationMethod` enum values (add as needed), 8 of 22 named metrics with no data
 source yet (ADR-009), a real solving agent for Condition B/C, an actual multi-condition
-comparison run (Native vs. ECC-backed) against the benchmark, CLI, metric/artifact persistence to
-disk, container/process-level sandboxing (open risk, see [[16-risks]]), reporting/dashboard
-(Phase 9-10).
+comparison run (Native vs. ECC-backed) against the benchmark (needed before `analyzeRepeatedRuns()`
+has real data to run on), failure analysis (Phase 7 roadmap remainder), CLI, metric/artifact
+persistence to disk, container/process-level sandboxing (open risk, see [[16-risks]]),
+reporting/dashboard (Phase 9-10).
 
 ## Verification snapshot
 
-Last run: `npm run build && npm test && npm run lint` — clean build, 130/130 tests passing across
-41 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
+Last run: `npm run build && npm test && npm run lint` — clean build, 174/174 tests passing across
+49 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
 that checkout is absent), zero lint errors. Confirmed no test files leak into `dist/` after
 `rm -rf dist && npm run build`.
 Re-run this before trusting this ledger; it is a snapshot, not a live status.

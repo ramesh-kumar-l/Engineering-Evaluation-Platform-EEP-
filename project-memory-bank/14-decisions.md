@@ -314,3 +314,74 @@ Format: Decision / Context / Options / Chosen approach / Reason / Trade-offs / C
   comparison run remain open next actions (roadmap Phase 6 originally scoped both together) —
   see [[phases/phase-06]] and [[20-next-actions]].
 - **Status:** Accepted.
+
+## ADR-011: Hand-rolled statistics module with exact published critical values, never approximated formulas; explicit insufficient-data results instead of exceptions bubbling through orchestration
+
+- **Context:** Phase 7's exit criterion is repeated-run statistical analysis (confidence
+  intervals, effect size) across categories/complexity — explicitly deferred by ADR-009 when
+  Phase 5 shipped only a non-statistical mean/median/stddev summarizer
+  (`aggregateMetricsByName()`). No statistics library is in `package.json` (ADR-002 anticipated
+  this trade-off: "will rely on well-tested small libraries or hand-rolled statistics with unit
+  tests rather than assuming a mature stats stack").
+- **Options considered (implementation):** (a) add a third-party statistics npm dependency; (b)
+  hand-roll the needed statistics, approximating the inverse t-distribution and inverse normal
+  CDF with a numerical formula (e.g. rational approximations); (c) hand-roll the needed
+  statistics using exact, published critical values for a fixed, small set of confidence levels
+  rather than a general inverse-distribution function.
+- **Chosen approach:** (c). `src/analysis/tDistribution.ts` hardcodes the standard published
+  two-tailed t-table for degrees of freedom 1-30 at exactly three confidence levels (90%/95%/99%),
+  falling back to the exact standard-normal z-critical value beyond df=30 (where the t and normal
+  distributions are already close). `src/analysis/confidenceInterval.ts` builds
+  `meanConfidenceInterval()` (Student's t, for continuous metrics) and
+  `proportionConfidenceInterval()` (Wilson score interval, for `task-success` — chosen over the
+  naive normal approximation because Wilson stays well-behaved at small n and at proportions near
+  0/1, both expected here). `src/analysis/effectSize.ts` implements Cohen's d (continuous metrics,
+  pooled-variance standardized mean difference) and Cohen's h (proportion metrics, arcsine-
+  transform difference), both classified into Cohen's conventional negligible/small/medium/large
+  buckets.
+- **Reason:** (a) adds a new runtime dependency for a small, well-understood set of formulas —
+  premature per ADR-004's infrastructure-discipline. (b) risks a subtly wrong inverse-CDF
+  approximation being silently trusted as "rigorous" when the whole point of this phase is
+  producing numbers a reader can trust; (c) is fully unit-testable against hand-verified worked
+  examples (see `tDistribution.test.ts`, `confidenceInterval.test.ts`, `effectSize.test.ts`) and
+  every value traces to a citeable published table or an exact closed-form constant, not an
+  approximation of unproven accuracy.
+- **Options considered (grouping/orchestration):** (a) let `meanConfidenceInterval()`/`cohensD()`
+  throw all the way up through the category/complexity orchestrator whenever a group has too few
+  runs, aborting the whole analysis; (b) have the orchestrator (`groupedAnalysis.ts`) catch or
+  pre-check sample size per group and return a typed `{status: 'insufficient-data', reason}` result
+  for that one group/comparison, leaving every other group's result intact.
+- **Chosen approach (orchestration):** (b). `GroupStatisticalSummary` and `GroupComparison` are
+  discriminated unions (`status: 'ok' | 'insufficient-data'`); the low-level functions in
+  `confidenceInterval.ts`/`effectSize.ts` still throw when called directly (so a test or a direct
+  caller can't silently receive a fabricated interval), but `repeatedRunAnalysis.ts`/
+  `groupedAnalysis.ts` check sample size explicitly before calling them and produce an
+  `insufficient-data` result instead of letting the exception propagate.
+- **Reason (orchestration):** A real experiment will have plenty of (category × complexity ×
+  condition) cells with only 1-2 runs, especially before many repeated runs accumulate; one
+  underpowered cell should not crash the entire analysis or silently disappear from the report —
+  it should say plainly why no interval could be computed. Matches the "never silently convert
+  unavailable into failed" discipline already established for verification
+  (project-memory-bank/06-evaluation-methodology.md §Explicit failure taxonomy, ADR-008).
+- **Trade-offs:** Only three confidence levels are supported (90/95/99) rather than an arbitrary
+  one — an intentional restriction, not a gap, since it lets every critical value be an exact
+  table lookup instead of an approximation. `analyzeRepeatedRuns()` never labels a condition
+  "better" (project-memory-bank/08-metrics.md §Anti-goal: direction of improvement is metric-
+  specific, e.g. lower `time-to-correct-outcome` is better but higher `task-success` is better) —
+  interpretation is left to a human reader or a later reporting layer (Phase 9).
+- **Consequences:** New `src/analysis/*.ts` (all under 300 lines; largest is
+  `repeatedRunAnalysis.ts` at 157): `stats.ts` (generic descriptive stats + shared
+  `InsufficientSampleSizeError`), `tDistribution.ts`, `confidenceInterval.ts`, `effectSize.ts`,
+  `groupBy.ts`, `analysisInput.ts` (`RunAnalysisRecord`, the structural input type pairing a run's
+  already-computed `Metric[]` with its condition name and task category/complexity — decoupled
+  from `harness`/`evaluation` types the same way `RunMetricsInput` is), `repeatedRunAnalysis.ts`
+  (per-condition summaries and pairwise comparisons), and `groupedAnalysis.ts`
+  (`analyzeRepeatedRuns()`, the Phase 7 entry point: overall + by-category + by-complexity). No
+  new Zod domain entity was added — like Phase 5's `AggregatedMetric`, these are plain TypeScript
+  interfaces, not a 15th schema-versioned entity in the fixed domain model
+  ([[05-domain-model]]) — since nothing here is persisted yet; that remains Phase 9's job.
+  `analyzeRepeatedRuns()` has not yet been run against real multi-condition experiment data,
+  since no such data exists yet (Phase 6's remaining scope — a real solving agent and an actual
+  comparison run — is still open); it is validated against synthetic fixture data in tests, the
+  same way Phase 5's metrics functions were validated before 30 real fixtures existed.
+- **Status:** Accepted.

@@ -32,9 +32,13 @@ ignoring them. See [[16-risks]] and [[15-assumptions]].
 
 Do not make strong claims from a tiny sample. Every public report must state limitations.
 Prefer "evidence supports an improvement in this benchmark under these conditions" over
-absolute claims like "X makes agents 20% better." Target methodology (built in Phase 7+):
-repeated runs, paired comparisons, confidence intervals, effect size, variance, task
-segmentation, failure analysis, ablation analysis.
+absolute claims like "X makes agents 20% better." Target methodology: repeated runs, paired
+comparisons, confidence intervals, effect size, variance, task segmentation, failure analysis,
+ablation analysis. As of Phase 7, `src/analysis/` (`analyzeRepeatedRuns()`) implements confidence
+intervals (Student's t for continuous metrics, Wilson score interval for the proportion metric
+`task-success`), effect size (Cohen's d / Cohen's h, classified negligible/small/medium/large),
+and task-category/complexity segmentation — see [[phases/phase-07]] and ADR-011 in
+[[14-decisions]]. Failure analysis and ablation analysis (Phase 8) remain open.
 
 ## Ablation discipline (Phase 8+)
 

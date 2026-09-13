@@ -5,18 +5,25 @@ source code, if picking this project back up after a break.
 
 ## Where things stand right now
 
-Phase 0 (Foundation) through Phase 5 (Metrics) are complete. Phase 6 (ECC Integration) is now
-also implemented and verified, scoped to this round's exact exit criterion: a real
-`ContextProvider` wrapping ECC via its external interface only. `EccContextProvider`
-(`src/harness/providers/eccContextProvider.ts`) shells out to ECC's own published CLI contract
-(`ecc context "<task>" --path <dir> [--budget <n>]`, documented in ECC's README) via
-`ProcessEccCliInvoker` — array-argument `execFile`, no shell string interpolation, fully
-configurable command/args so no absolute path to any machine's ECC checkout is hardcoded. Every
-invocation's stdout is parsed and validated against `eccPackageSchema.ts`, EEP's own independent
-Zod mirror of ECC's documented `EngineeringContextPackage` shape — EEP never imports ECC source,
-per the repository boundary rule. Proven against a real sibling ECC checkout end-to-end
-(`eccContextProvider.realCli.test.ts`, `skipIf`-gated so it passes-by-skipping when that checkout
-isn't present). Full detail in [[phases/phase-06]] and ADR-010 in [[14-decisions]].
+Phase 0 (Foundation) through Phase 6 (ECC Integration, ContextProvider-only scope) are complete.
+Phase 7 (Experimental Analysis) is now also implemented and verified, scoped to this round's exact
+exit criterion: repeated-run statistical analysis — confidence intervals and effect size — across
+task categories and complexity levels. `src/analysis/analyzeRepeatedRuns()`
+(`src/analysis/groupedAnalysis.ts`) is the entry point: given a list of `RunAnalysisRecord`
+(a run's already-computed `Metric[]` paired with its condition name and task category/complexity),
+it produces, per requested metric, an overall summary/comparison plus one breakdown per category
+and per complexity level actually present. Confidence intervals use the Student's t-distribution
+for continuous metrics (`meanConfidenceInterval`) or the Wilson score interval for the proportion
+metric `task-success` (`proportionConfidenceInterval`); effect size uses Cohen's d (continuous) or
+Cohen's h (proportion). All critical values are exact published table lookups, never an
+approximated formula (ADR-011). A group with too few runs returns an explicit
+`insufficient-data` result rather than a fabricated number or a thrown exception that would abort
+the whole analysis. Full detail in [[phases/phase-07]] and ADR-011 in [[14-decisions]].
+
+Phase 6 recap: `EccContextProvider` (`src/harness/providers/eccContextProvider.ts`) wraps ECC's
+published CLI contract (`ecc context "<task>" --path <dir> [--budget <n>]`) via
+`ProcessEccCliInvoker`, validated against EEP's own independent `eccPackageSchema.ts` mirror —
+never an import of ECC source. Full detail in [[phases/phase-06]] and ADR-010.
 
 Phase 5 recap: `src/metrics/computeRunMetrics()` turns a completed, evaluated run into an array of
 schema-valid `Metric` records — all 5 primary metrics plus 9 of 17 secondary metrics; 8 remain
@@ -26,26 +33,29 @@ deliberately unimplemented (ADR-009). Full detail in [[phases/phase-05]].
 
 No real solving agent yet — `NativeContextProvider`/`NativeAgent` (no context) and
 `EccContextProvider` (real curated context) both exist, but nothing plays Condition B/C's "does
-real work" agent role yet, so no actual native-vs-ECC comparison run has happened. 27 of 30 tasks
-have no fixture source code yet (tracked backlog, see [[20-next-actions]]). Only 2 of 9
-`verificationMethod` enum values have a real verifier (`test-suite`, `diff-analysis`). 8 of 22
-named metrics have no real data source yet (ADR-009) — though ECC's per-item
-relevance/trustLevel/authority/freshness data is now available inside `ContextArtifact.content`
-as a future (not yet wired) source for 4 of those 8. No metric/artifact persistence to disk
-(everything Phases 3-6 produce is computed in-memory and returned to the caller — there is no CLI
-or storage layer yet). No container/process-level sandboxing (isolation is filesystem-copy only;
-`testSuiteVerifier` spawns real child processes with only a wall-clock timeout — see the open risk
-in [[16-risks]]). Do not assume any of these exist without checking `implementation-status.md`
-first.
+real work" agent role yet, so no actual native-vs-ECC comparison run has happened, which also
+means `analyzeRepeatedRuns()` has never yet run against real experiment data — only synthetic
+fixture data in its tests. 27 of 30 tasks have no fixture source code yet (tracked backlog, see
+[[20-next-actions]]). Only 2 of 9 `verificationMethod` enum values have a real verifier
+(`test-suite`, `diff-analysis`). 8 of 22 named metrics have no real data source yet (ADR-009) —
+though ECC's per-item relevance/trustLevel/authority/freshness data is now available inside
+`ContextArtifact.content` as a future (not yet wired) source for 4 of those 8. Failure analysis
+(the 4th item in [[13-roadmap]]'s Phase 7 row) was not requested this round and is not built. No
+metric/artifact/analysis persistence to disk (everything Phases 3-7 produce is computed in-memory
+and returned to the caller — there is no CLI or storage layer yet). No container/process-level
+sandboxing (isolation is filesystem-copy only; `testSuiteVerifier` spawns real child processes
+with only a wall-clock timeout — see the open risk in [[16-risks]]). Do not assume any of these
+exist without checking `implementation-status.md` first.
 
 ## Immediate next step
 
-Per the master prompt's strict phase gate, Phase 6 (this round's scope) completion was reported
-to the user and no further Phase 6/7 work has started. Do not begin further work without an
+Per the master prompt's strict phase gate, Phase 7 (this round's scope) completion was reported
+to the user and no further Phase 7/8 work has started. Do not begin further work without an
 explicit new approval message from the user, even if this file is being read in a fresh session —
-see [[20-next-actions]] and [[00-project-charter]] §Working protocol. The next open items are a
-real solving agent for Condition B/C and an actual multi-condition comparison run wiring
-Conditions A-D in [[09-experiment-strategy]] to the now-real providers.
+see [[20-next-actions]] and [[00-project-charter]] §Working protocol. The next open items are: a
+real solving agent for Condition B/C and an actual multi-condition comparison run (still open from
+Phase 6, and a prerequisite for `analyzeRepeatedRuns()` to analyze real data instead of synthetic
+fixtures), failure analysis (Phase 7's roadmap remainder), or Phase 8 (Ablation).
 
 ## Process reminders for whoever (human or agent) picks this up
 
@@ -79,3 +89,11 @@ Conditions A-D in [[09-experiment-strategy]] to the now-real providers.
   source, and never hardcode a filesystem path to any specific ECC checkout; the invoked
   command/args are always constructor-/env-configurable. If ECC's package contract changes,
   update the independent mirror in `eccPackageSchema.ts`, not by importing ECC's own schema.
+- Statistics convention (ADR-011): only 90%/95%/99% confidence levels are supported, backed by
+  exact published t-table/z-critical values (`src/analysis/tDistribution.ts`) — never add a new
+  confidence level without also adding its exact critical values, and never replace the table with
+  an approximated inverse-distribution formula. Low-level functions
+  (`meanConfidenceInterval`/`cohensD`/etc.) throw `InsufficientSampleSizeError` when misused
+  directly; orchestration code (`repeatedRunAnalysis.ts`/`groupedAnalysis.ts`) must catch that by
+  checking sample size upfront and returning a `status: 'insufficient-data'` result instead of
+  letting one underpowered group crash the whole analysis.

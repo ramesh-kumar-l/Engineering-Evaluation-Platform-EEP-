@@ -1,17 +1,23 @@
 # 20 — Next Actions
 
-1. **Immediate:** await explicit user approval to proceed with the rest of Phase 6's roadmap
-   scope (a real solving agent, an actual comparison run) or to move on to Phase 7.
+1. **Immediate:** await explicit user approval to proceed with the rest of Phase 6/7's roadmap
+   scope (a real solving agent, an actual comparison run, failure analysis) or to move on to
+   Phase 8.
 2. **Phase 6 remainder (not yet done):**
    - Implement a real solving agent (an LLM coding agent) for Condition B/C, replacing
      `NativeAgent` as the "does real work" condition — `NativeAgent` remains the native/no-context
      baseline.
    - Wire Conditions A-D from [[09-experiment-strategy]] to real providers/agents and run an
      actual controlled comparison (native vs. `EccContextProvider`-assisted) against the
-     benchmark.
+     benchmark. This is also the prerequisite for Phase 7's `analyzeRepeatedRuns()`
+     (`src/analysis/groupedAnalysis.ts`) to run against real data instead of synthetic fixtures.
    - `EccContextProvider` currently has no real `tokenCount` from ECC's CLI contract, so it uses
      Phase 5's `estimateTokenCount()` fallback on the serialized package — revisit if ECC's
      documented output ever adds one.
+2a. **Phase 7 remainder (not yet done):** failure analysis (the 4th item in [[13-roadmap]]'s
+   Phase 7 row, alongside repeated-run/category/complexity analysis) — not requested this round's
+   exit criterion; add once there is real failure data (from an actual comparison run) to analyze,
+   e.g. which `verificationMethod` most often fails, clustered by category/complexity/condition.
 3. **Fixture backlog (not phase-blocking, pick up incrementally):** 27 of the 30 tasks still use
    the `"unpinned"` sentinel — only `debugging-01`, `feature-01`, `refactoring-01` have real
    fixture source code, a real `commitSha`, and real verification coverage. Author the rest the
@@ -40,4 +46,11 @@
    or set `ECC_CLI_COMMAND=node` and pass `commandArgs` accordingly. See ADR-010 and
    [[phases/phase-06]].
 
-Do not start further Phase 6/7 implementation before approval is given (master prompt §40).
+7. **Statistics convention note (ADR-011):** `src/analysis/` supports exactly three confidence
+   levels (90%/95%/99%), each backed by an exact published critical value — do not add a new
+   level without adding its exact table value, and do not replace the table with an approximated
+   inverse-distribution formula. To add multiple-comparisons correction (flagged as a known
+   limitation in [[phases/phase-07]]), that belongs in Phase 9's reporting layer, not by changing
+   `analyzeRepeatedRuns()`'s per-comparison confidence level.
+
+Do not start further Phase 7/8 implementation before approval is given (master prompt §40).
