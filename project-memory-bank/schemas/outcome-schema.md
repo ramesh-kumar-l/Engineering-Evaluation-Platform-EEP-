@@ -12,5 +12,10 @@ Tests: `src/domain/outcome/outcome.schema.test.ts`, `src/domain/common/status.te
 `status` is a required field with no default — an omitted status is a validation error, not a
 silent `SUCCESS`, per [[06-evaluation-methodology]] §Explicit failure taxonomy.
 
+**Constructed by (Phase 4):** `src/evaluation/evaluateRun.ts`'s `executeEvaluatedRun()`, using
+`src/evaluation/determineOutcome.ts`'s `determineOutcomeStatus()` as the single authority for
+`status` — it always overrides the Trace's `agentReportedStatus` except for infra-level statuses
+which pass through untouched. See [[phases/phase-04]] and ADR-008 in [[14-decisions]].
+
 This file intentionally does not restate fields — see [[10-reproducibility]] §Independent
 versioning axes.

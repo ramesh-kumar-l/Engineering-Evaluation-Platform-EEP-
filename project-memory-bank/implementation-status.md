@@ -46,7 +46,7 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `loadTasks.ts` (read + validate `benchmark/tasks/*.json` against `taskSchema`) | Done |
 | `index.ts` (barrel) | Done |
 
-## src/harness/ (Phase 3)
+## src/harness/ (Phase 3, extended Phase 4)
 
 | Module | Status |
 |---|---|
@@ -54,8 +54,22 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `support/listFiles.ts` (shared recursive file listing, capped) | Done |
 | `providers/nativeContextProvider.ts` (`NativeContextProvider`) | Done |
 | `agents/nativeAgent.ts` (`NativeAgent`) | Done |
-| `runHarness.ts` (`executeRun` — Task+Condition+Agent+ContextProvider → Run+Trace) | Done |
+| `runHarness.ts` (`executeRun` — Task+Condition+Agent+ContextProvider → Run+Trace; now also carries an optional `onBeforeCleanup` hook, Phase 4) | Done |
 | `index.ts` (barrel) | Done |
+
+## src/evaluation/ (Phase 4)
+
+| Module | Status |
+|---|---|
+| `verifiers/verifier.types.ts` (`Verifier` contract, `VerificationExecutionError`/`VerificationTimeoutError`) | Done |
+| `verifiers/testSuiteVerifier.ts` (spawns fixture's real `npm test`) | Done |
+| `verifiers/diffAnalysisVerifier.ts` (generic pristine-vs-workspace change detection) | Done |
+| `verifiers/index.ts` (`ALL_VERIFIERS` registry + barrel) | Done |
+| `runVerifiers.ts` (runs every applicable verifier, collects results + execution errors) | Done |
+| `determineOutcome.ts` (`determineOutcomeStatus` — pure, exhaustively tested status rule, ADR-008) | Done |
+| `evaluateRun.ts` (`executeEvaluatedRun` — Task → Run+Trace+Outcome+Verification[]+Evidence[]) | Done |
+| `index.ts` (barrel) | Done |
+| Verifiers for `static-analysis`, `repository-invariant`, `acceptance-criteria-check`, `security-check`, `architecture-check`, `human-review`, `llm-judge` | Not started — add as a fixture needs them |
 
 ## benchmark/ (Phase 2, updated Phase 3)
 
@@ -68,15 +82,15 @@ Update this whenever a major feature/module is finished, not only at phase bound
 
 ## Not started
 
-Fixture repositories + real commit pins for 27 of 30 tasks (incremental backlog), verification
-execution + Outcome construction (Phase 4), metrics computation (Phase 5), a real solving agent
-and ECC adapter (Phase 6), CLI, container/process-level sandboxing (open risk, see [[16-risks]]),
-reporting/dashboard (Phase 9-10).
+Fixture repositories + real commit pins for 27 of 30 tasks (incremental backlog), verifiers for
+5 of the 7 remaining `verificationMethod` enum values (add as needed), metrics computation
+(Phase 5), a real solving agent and ECC adapter (Phase 6), CLI, container/process-level
+sandboxing (open risk, see [[16-risks]]), reporting/dashboard (Phase 9-10).
 
 ## Verification snapshot
 
-Last run: `npm run build && npm test && npm run lint` — clean build, 67/67 tests passing across
-26 files, zero lint errors. Confirmed no test files leak into `dist/` after `rm -rf dist && npm
-run build`. The compiled `dist/` harness was also manually run end-to-end against the real
-`debugging-01` fixture. Re-run this before trusting this ledger; it is a snapshot, not a live
-status.
+Last run: `npm run build && npm test && npm run lint` — clean build, 89/89 tests passing across
+31 files, zero lint errors. Confirmed no test files leak into `dist/` after `rm -rf dist && npm
+run build`. The compiled `dist/` evaluation pipeline was also manually run end-to-end against the
+real `debugging-01` fixture (produced `Outcome.status: TASK_FAILURE` as expected for `NativeAgent`).
+Re-run this before trusting this ledger; it is a snapshot, not a live status.

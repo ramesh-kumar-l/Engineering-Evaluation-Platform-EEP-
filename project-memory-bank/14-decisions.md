@@ -159,3 +159,57 @@ Format: Decision / Context / Options / Chosen approach / Reason / Trade-offs / C
   `Outcome.status`, Phase 4, is) and defaults to absent for backward compatibility, so no
   `TRACE_SCHEMA_VERSION` bump was needed.
 - **Status:** Accepted.
+
+## ADR-008: Verification as a pluggable, text-triggered checker registry; Outcome.status always overrides agentReportedStatus
+
+- **Context:** Phase 4 (Deterministic Evaluation) needed to turn a Trace into an authoritative
+  `Outcome`, using `task.verificationMethod` (a free-text field like `"test-suite: run the
+  pagination tests."` or `"diff-analysis: confirm duplication removed, combined with a
+  test-suite run."`) to decide which checks to run, and needed a single rule for combining
+  possibly-conflicting signals (the agent's own self-report vs. what verification actually found)
+  into one `RunStatus`.
+- **Options considered (verifier selection):** (a) a rigid enum-to-verifier 1:1 mapping requiring
+  every task's `verificationMethod` to name exactly one method; (b) a small `Verifier` interface
+  (`appliesTo(task)` + `run(context)`) with a registry (`ALL_VERIFIERS`), where each verifier
+  text-matches its own keyword against `verificationMethod` and multiple verifiers may apply to
+  one task.
+- **Chosen approach (verifier selection):** (b). `src/evaluation/verifiers/`: `testSuiteVerifier`
+  (spawns the fixture's own `npm test`, no shell-injection risk since the command is fixed and
+  never built from task/agent-controlled input) and `diffAnalysisVerifier` (generic structural
+  check: did any file actually change relative to the pristine fixture — necessary-but-not-
+  sufficient evidence, catches "explored and claimed success without changing anything"). A
+  verifier that cannot run at all (missing test script, unreadable fixture) throws
+  `VerificationExecutionError`/`VerificationTimeoutError` rather than returning a fabricated
+  `passed: false`, so "evaluation unavailable" is never silently reported as "evaluation failed."
+- **Reason (verifier selection):** Matches
+  project-memory-bank/06-evaluation-methodology.md §Multi-evidence outcome evaluation ("prefer
+  combining, where available") — `refactoring-01`'s verificationMethod names both `diff-analysis`
+  and `test-suite`, and both genuinely run and get combined into one Outcome.
+- **Options considered (status combination):** (a) trust `agentReportedStatus` when it says
+  `SUCCESS` and only fall back to verification on `INCOMPLETE`; (b) `agentReportedStatus` governs
+  only the infra-level statuses (`ENVIRONMENT_FAILURE`, `AGENT_FAILURE`, `TIMEOUT`) — for every
+  other case, verification alone decides `SUCCESS` vs. `TASK_FAILURE`, and an empty verification
+  result is `EVALUATION_FAILURE`.
+- **Chosen approach (status combination):** (b), implemented as the pure function
+  `determineOutcomeStatus()` in `src/evaluation/determineOutcome.ts`.
+- **Reason (status combination):** This is the entire point of Phase 4 per
+  [[schemas/trace-schema]] and ADR-007's interface-fix note: an agent claiming `SUCCESS` does not
+  mean the work is correct. Trusting the self-report for `SUCCESS` would make `Outcome.status`
+  redundant with `agentReportedStatus` and defeat the purpose of building verification at all.
+  Proven concretely by two fixtures under test: `debugging-01` run by a test-only agent that
+  writes a genuine fix reports `agentReportedStatus: SUCCESS` and independently verifies to
+  `Outcome.status: SUCCESS`; `refactoring-01` run by `NativeAgent` has its `test-suite` check pass
+  (pre-refactor behavior is intact) but its `diff-analysis` check fail (nothing was actually
+  changed), correctly yielding `TASK_FAILURE` overall — multi-evidence combination doing exactly
+  the job the methodology describes.
+- **Trade-offs:** `diffAnalysisVerifier`'s "did anything change" check is a coarse, task-agnostic
+  signal — it cannot tell a correct refactor from a destructive one; it only rules out "no attempt
+  was made." Finer-grained diff analysis (e.g., "duplication actually removed") would need
+  task-specific assertions, deferred until a concrete need arises.
+- **Consequences:** `src/harness/runHarness.ts` gained one small, backward-compatible extension
+  point (`HarnessDependencies.onBeforeCleanup`, optional) so verification can run against the
+  agent-modified workspace before it is cleaned up, without `executeRun()`/Phase 3 tests knowing
+  anything about `Verification`/`Outcome`. Contract: the hook must never throw (a throw would be
+  indistinguishable from `AGENT_FAILURE`); `src/evaluation/evaluateRun.ts`'s hook guarantees this
+  by construction (`runVerifiers()` catches every verifier's errors internally).
+- **Status:** Accepted.
