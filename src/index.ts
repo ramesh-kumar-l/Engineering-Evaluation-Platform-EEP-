@@ -1,0 +1,2 @@
+/** EEP package version. Bump alongside project-memory-bank/14-decisions.md version notes. */
+export const VERSION = '0.1.0';
