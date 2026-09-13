@@ -36,7 +36,7 @@ Update this whenever a major feature/module is finished, not only at phase bound
 
 | Interface | Status |
 |---|---|
-| `ContextProvider` (now carries `runId` on its request — Phase 3) | Interface defined; first implementation in `src/harness/` (Phase 3); ECC-backed implementation is Phase 6 |
+| `ContextProvider` (now carries `runId` on its request — Phase 3) | Interface defined; native implementation Phase 3, ECC-backed implementation Phase 6 — both Done |
 | `Agent` (now carries `runId` on its request — Phase 3) | Interface defined; first implementation (`NativeAgent`) in `src/harness/` (Phase 3); a real solving agent is later work |
 
 ## src/benchmark/ (Phase 2)
@@ -46,13 +46,16 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `loadTasks.ts` (read + validate `benchmark/tasks/*.json` against `taskSchema`) | Done |
 | `index.ts` (barrel) | Done |
 
-## src/harness/ (Phase 3, extended Phase 4/5)
+## src/harness/ (Phase 3, extended Phase 4/5/6)
 
 | Module | Status |
 |---|---|
 | `workspace.ts` (`createIsolatedWorkspace` — filesystem-copy sandbox, ADR-007) | Done |
 | `support/listFiles.ts` (shared recursive file listing, capped) | Done |
 | `providers/nativeContextProvider.ts` (`NativeContextProvider`) | Done |
+| `providers/eccPackageSchema.ts` (independent Zod mirror of ECC's `EngineeringContextPackage` contract, ADR-010) | Done (Phase 6) |
+| `providers/eccCliInvoker.ts` (`ProcessEccCliInvoker` — configurable subprocess wrapper around ECC's `ecc context` CLI, ADR-010) | Done (Phase 6) |
+| `providers/eccContextProvider.ts` (`EccContextProvider implements ContextProvider` — Condition B/C's real ECC-backed source) | Done (Phase 6) |
 | `agents/nativeAgent.ts` (`NativeAgent`) | Done |
 | `runHarness.ts` (`executeRun` — Task+Condition+Agent+ContextProvider → Run+Trace; carries an optional `onBeforeCleanup` hook (Phase 4) and now also returns the full `contextArtifact` on `HarnessRunOutcome` (Phase 5, ADR-009)) | Done |
 | `index.ts` (barrel) | Done |
@@ -98,13 +101,15 @@ Update this whenever a major feature/module is finished, not only at phase bound
 
 Fixture repositories + real commit pins for 27 of 30 tasks (incremental backlog), verifiers for
 7 of the 9 `verificationMethod` enum values (add as needed), 8 of 22 named metrics with no data
-source yet (ADR-009), a real solving agent and ECC adapter (Phase 6), CLI, metric/artifact
-persistence to disk, container/process-level sandboxing (open risk, see [[16-risks]]),
-reporting/dashboard (Phase 9-10).
+source yet (ADR-009), a real solving agent for Condition B/C, an actual multi-condition
+comparison run (Native vs. ECC-backed) against the benchmark, CLI, metric/artifact persistence to
+disk, container/process-level sandboxing (open risk, see [[16-risks]]), reporting/dashboard
+(Phase 9-10).
 
 ## Verification snapshot
 
-Last run: `npm run build && npm test && npm run lint` — clean build, 116/116 tests passing across
-45 files, zero lint errors. Confirmed no test files leak into `dist/` after `rm -rf dist && npm
-run build`.
+Last run: `npm run build && npm test && npm run lint` — clean build, 130/130 tests passing across
+41 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
+that checkout is absent), zero lint errors. Confirmed no test files leak into `dist/` after
+`rm -rf dist && npm run build`.
 Re-run this before trusting this ledger; it is a snapshot, not a live status.

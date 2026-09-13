@@ -1,6 +1,6 @@
 # 18 — Current State
 
-Last updated: 2026-09-13 (Phase 5 complete).
+Last updated: 2026-09-13 (Phase 6 complete).
 
 ## What exists
 
@@ -38,6 +38,14 @@ Last updated: 2026-09-13 (Phase 5 complete).
   decision-confidence — see ADR-009). `aggregateMetricsByName()` gives a lightweight, explicitly
   non-statistical mean/median/stddev summary across repeated runs, previewing (not pre-empting)
   Phase 7's full analysis. See [[phases/phase-05]] and ADR-009 in [[14-decisions]].
+- **ECC integration (`src/harness/providers/ecc*.ts`, Phase 6):** `EccContextProvider` — a real
+  `ContextProvider` implementation wired to ECC through its published CLI contract only
+  (`ecc context "<task>" --path <dir> [--budget <n>]`), never an import of ECC's source, per the
+  repository boundary rule in [[00-project-charter]]. `ProcessEccCliInvoker` shells out with
+  array-argument `execFile` (configurable command/args, no hardcoded path); `eccPackageSchema.ts`
+  is EEP's own independent Zod mirror of ECC's documented `EngineeringContextPackage` output,
+  validated on every invocation before anything is trusted. Proven against a real sibling ECC
+  checkout, not just fakes — see [[phases/phase-06]] and ADR-010 in [[14-decisions]].
 - 3 of the 30 benchmark tasks (`debugging-01`, `feature-01`, `refactoring-01`) have real,
   runnable fixture source code under `benchmark/fixtures/<id>/` and a real pinned
   `repository.commitSha`; the other 27 remain `"unpinned"` (tracked backlog, not a defect).
@@ -61,8 +69,11 @@ Last updated: 2026-09-13 (Phase 5 complete).
   layer to write them alongside `Run`/`Trace`/`Outcome` artifacts doesn't exist — no CLI exists at
   all yet).
 - No real solving agent (only the deliberately inert `NativeAgent` baseline and Phase 4's
-  test-only `FixPaginationAgent`, which never leaves `src/evaluation/evaluateRun.test.ts`) and no
-  ECC adapter or integration — Phase 6.
+  test-only `FixPaginationAgent`, which never leaves `src/evaluation/evaluateRun.test.ts`) — a
+  real agent for Condition B/C is a tracked next action, see [[20-next-actions]].
+- No actual multi-condition comparison run (Conditions A vs. B/C/D against the benchmark) —
+  `EccContextProvider` exists and is proven end-to-end, but nothing has orchestrated a real
+  comparison experiment yet; that combines the new provider with a real solving agent, next.
 - No CLI commands of any kind.
 - No container/process-level sandboxing — isolation is filesystem-copy only (ADR-007);
   `testSuiteVerifier` spawns real child processes with only a wall-clock timeout, no CPU/memory
@@ -71,6 +82,8 @@ Last updated: 2026-09-13 (Phase 5 complete).
 
 ## Verification performed
 
-`npm install && npm run build && npm test && npm run lint` — 116 tests passing across 45 test
-files, clean build, clean lint. No test files leak into `dist/`. See [[phases/phase-05]] for
-details.
+`npm install && npm run build && npm test && npm run lint` — 130 tests passing across 41 test
+files, clean build, clean lint. No test files leak into `dist/`. One test
+(`eccContextProvider.realCli.test.ts`) exercises a real sibling ECC checkout end-to-end and is
+`skipIf`-gated so it passes-by-skipping in an environment without that checkout. See
+[[phases/phase-06]] for details.

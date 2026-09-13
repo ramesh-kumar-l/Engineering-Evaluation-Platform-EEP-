@@ -271,3 +271,46 @@ Format: Decision / Context / Options / Chosen approach / Reason / Trade-offs / C
   now-existing data source later is a new file under `src/metrics/`, following the same
   registry-free "one function per concern" pattern as `primaryMetrics.ts`/`secondaryMetrics.ts`.
 - **Status:** Accepted.
+
+## ADR-010: ECC integration via subprocess CLI invocation, EEP owns an independent schema mirror
+
+- **Context:** Phase 6's exit criterion is a real `ContextProvider` backed by ECC, wired through
+  ECC's external interface only — never an import of ECC's internal modules — per the hard
+  repository-boundary rule in [[00-project-charter]]. [[04-architecture]] left the exact
+  mechanism ("likely CLI invocation or a documented artifact contract") deferred to this phase.
+- **Options:** (a) CLI subprocess invocation of ECC's published `ecc` binary/`dist/cli/index.js`
+  entry point, parsing its documented stdout JSON contract; (b) a filesystem artifact contract
+  (ECC writes a context file, EEP reads it); (c) importing ECC's TypeScript modules directly as a
+  library dependency.
+- **Chosen approach:** (a) subprocess CLI invocation.
+- **Reason:** ECC's own README documents exactly one stable, versioned, human-and-machine-
+  readable contract for this purpose: `ecc context "<task>" --path <dir> [--budget <n>]` printing
+  a validated `EngineeringContextPackage` JSON document to stdout (ECC validates its own output
+  against its internal schema before printing — see ECC's `src/cli/cli.ts`). This is lower
+  friction than (b) for a synchronous request/response shape, and (c) is categorically
+  disallowed by the repository boundary rule regardless of friction.
+- **Trade-offs:** A subprocess call is slower and has weaker type safety at the boundary than an
+  in-process call would; mitigated by owning an independent Zod schema (`eccPackageSchema.ts`)
+  that mirrors ECC's documented package shape and validates every invocation's output before any
+  of it is trusted, so a future ECC contract change fails loudly (a `EccInvocationError`) rather
+  than silently producing garbage. The invoked command is not hardcoded — `EccCliInvokerOptions`
+  (`command`/`commandArgs`, defaulting to `ECC_CLI_COMMAND` env var else `"ecc"`) lets a
+  deployment point at a global link or `node <checkout>/dist/cli/index.js` with zero EEP code
+  changes, so this repo never bakes in another machine's absolute path.
+- **Consequences:** New `src/harness/providers/ecc*.ts` (all under 300 lines):
+  `eccPackageSchema.ts` (independent contract mirror), `eccCliInvoker.ts`
+  (`ProcessEccCliInvoker`, array-argument `execFile` — never shell string interpolation, matching
+  ECC's own documented security posture — with `EccInvocationError`/`EccTimeoutError`), and
+  `eccContextProvider.ts` (`EccContextProvider implements ContextProvider`, condition B/C's real
+  context source per [[09-experiment-strategy]]). The full validated package JSON becomes the
+  `ContextArtifact.content`; `tokenCount` uses Phase 5's `estimateTokenCount()` since ECC's CLI
+  contract does not itself report a token count. Unit tests inject a fake `EccCliInvoker` (no
+  subprocess) or spawn small self-authored fake-CLI scripts (matching the ADR-007 fixture
+  discipline of never depending on uncontrolled external state); one additional test
+  (`eccContextProvider.realCli.test.ts`) does invoke a real sibling ECC checkout end-to-end but is
+  `skipIf`-gated on that checkout existing and being built, so the suite stays green in any
+  environment that only has this repo. Exit criterion scope note: this phase, as instructed,
+  covers only the `ContextProvider`; a real solving agent and an actual multi-condition
+  comparison run remain open next actions (roadmap Phase 6 originally scoped both together) —
+  see [[phases/phase-06]] and [[20-next-actions]].
+- **Status:** Accepted.

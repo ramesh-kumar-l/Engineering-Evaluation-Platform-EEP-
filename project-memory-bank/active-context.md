@@ -5,44 +5,47 @@ source code, if picking this project back up after a break.
 
 ## Where things stand right now
 
-Phase 0 (Foundation) through Phase 4 (Deterministic Evaluation) are complete. Phase 5 (Metrics)
-is now also implemented and verified: `src/metrics/computeRunMetrics()` turns a completed,
-evaluated run (Run/Trace/Outcome/Verification/Evidence/ContextArtifact) into an array of
-schema-valid `Metric` records — all 5 primary metrics (`task-success`, `engineering-quality`,
-`time-to-correct-outcome`, `context-efficiency`, `human-intervention`) plus 9 of 17 secondary
-metrics. The remaining 8 secondary metrics (evidence recall/precision/authority/freshness,
-context-redundancy, regression-rate, risk-classification, decision-confidence) are deliberately
-NOT computed — each needs a data source (curated evidence ground-truth, a risk/confidence field,
-cross-run history) that does not exist yet, rather than being approximated with a fabricated
-value. Two implemented primary metrics are documented proxies, not their literal
-[[08-metrics]] definitions: `engineering-quality` = fraction of executed verifications that
-passed (until static-analysis/security-check/architecture-check verifiers exist);
-`context-efficiency` = task-success per 1000 context tokens (until a real curated ContextProvider
-in Phase 6 gives "usefulness" a ground truth to compare against). A lightweight, explicitly
-non-statistical `aggregateMetricsByName()` (mean/median/sample-stddev) previews — but does not
-pre-empt — Phase 7's full repeated-run analysis. Full detail in [[phases/phase-05]] and ADR-009
-in [[14-decisions]].
+Phase 0 (Foundation) through Phase 5 (Metrics) are complete. Phase 6 (ECC Integration) is now
+also implemented and verified, scoped to this round's exact exit criterion: a real
+`ContextProvider` wrapping ECC via its external interface only. `EccContextProvider`
+(`src/harness/providers/eccContextProvider.ts`) shells out to ECC's own published CLI contract
+(`ecc context "<task>" --path <dir> [--budget <n>]`, documented in ECC's README) via
+`ProcessEccCliInvoker` — array-argument `execFile`, no shell string interpolation, fully
+configurable command/args so no absolute path to any machine's ECC checkout is hardcoded. Every
+invocation's stdout is parsed and validated against `eccPackageSchema.ts`, EEP's own independent
+Zod mirror of ECC's documented `EngineeringContextPackage` shape — EEP never imports ECC source,
+per the repository boundary rule. Proven against a real sibling ECC checkout end-to-end
+(`eccContextProvider.realCli.test.ts`, `skipIf`-gated so it passes-by-skipping when that checkout
+isn't present). Full detail in [[phases/phase-06]] and ADR-010 in [[14-decisions]].
+
+Phase 5 recap: `src/metrics/computeRunMetrics()` turns a completed, evaluated run into an array of
+schema-valid `Metric` records — all 5 primary metrics plus 9 of 17 secondary metrics; 8 remain
+deliberately unimplemented (ADR-009). Full detail in [[phases/phase-05]].
 
 ## What is NOT done
 
-27 of 30 tasks have no fixture source code yet (tracked backlog, see [[20-next-actions]]). Only 2
-of 9 `verificationMethod` enum values have a real verifier (`test-suite`, `diff-analysis`). 8 of
-22 named metrics have no real data source yet (ADR-009). No metric/artifact persistence to disk
-(everything Phases 3-5 produce is computed in-memory and returned to the caller — there is no CLI
-or storage layer yet). No real solving agent, no ECC adapter, no container/process-level
-sandboxing (isolation is filesystem-copy only; `testSuiteVerifier` spawns real child processes
-with only a wall-clock timeout — see the open risk in [[16-risks]]). Do not assume any of these
-exist without checking `implementation-status.md` first.
+No real solving agent yet — `NativeContextProvider`/`NativeAgent` (no context) and
+`EccContextProvider` (real curated context) both exist, but nothing plays Condition B/C's "does
+real work" agent role yet, so no actual native-vs-ECC comparison run has happened. 27 of 30 tasks
+have no fixture source code yet (tracked backlog, see [[20-next-actions]]). Only 2 of 9
+`verificationMethod` enum values have a real verifier (`test-suite`, `diff-analysis`). 8 of 22
+named metrics have no real data source yet (ADR-009) — though ECC's per-item
+relevance/trustLevel/authority/freshness data is now available inside `ContextArtifact.content`
+as a future (not yet wired) source for 4 of those 8. No metric/artifact persistence to disk
+(everything Phases 3-6 produce is computed in-memory and returned to the caller — there is no CLI
+or storage layer yet). No container/process-level sandboxing (isolation is filesystem-copy only;
+`testSuiteVerifier` spawns real child processes with only a wall-clock timeout — see the open risk
+in [[16-risks]]). Do not assume any of these exist without checking `implementation-status.md`
+first.
 
 ## Immediate next step
 
-Per the master prompt's strict phase gate, Phase 5 completion was reported to the user and
-Phase 6 (ECC Integration) has NOT started. Do not begin Phase 6 work without an explicit new
-approval message from the user, even if this file is being read in a fresh session — see
-[[20-next-actions]] and [[00-project-charter]] §Working protocol. Phase 6's first job is a real
-`ContextProvider` backed by ECC (via the existing interface only, never a direct import of ECC
-internals) and a real solving agent, so Conditions A-D in [[09-experiment-strategy]] can actually
-be compared.
+Per the master prompt's strict phase gate, Phase 6 (this round's scope) completion was reported
+to the user and no further Phase 6/7 work has started. Do not begin further work without an
+explicit new approval message from the user, even if this file is being read in a fresh session —
+see [[20-next-actions]] and [[00-project-charter]] §Working protocol. The next open items are a
+real solving agent for Condition B/C and an actual multi-condition comparison run wiring
+Conditions A-D in [[09-experiment-strategy]] to the now-real providers.
 
 ## Process reminders for whoever (human or agent) picks this up
 
@@ -71,3 +74,8 @@ be compared.
   source exists for it — never approximate a named metric with a fabricated/placeholder value.
   Add it as a small function in `primaryMetrics.ts`/`secondaryMetrics.ts` (or a new file if it
   needs its own data-gathering logic), sourced from `RunMetricsInput` in `metricsInput.ts`.
+- ECC integration convention (ADR-010): EEP talks to ECC only through its documented CLI
+  contract (`src/harness/providers/eccCliInvoker.ts`/`eccContextProvider.ts`) — never import ECC
+  source, and never hardcode a filesystem path to any specific ECC checkout; the invoked
+  command/args are always constructor-/env-configurable. If ECC's package contract changes,
+  update the independent mirror in `eccPackageSchema.ts`, not by importing ECC's own schema.

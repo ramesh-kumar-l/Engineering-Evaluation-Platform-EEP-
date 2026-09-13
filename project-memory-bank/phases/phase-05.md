@@ -39,7 +39,7 @@ run.
 
 ## Tests
 
-8 new test files, 27 new tests (116 total across 45 files, up from 89/37):
+6 new test files, 27 new tests (116 total across 37 files, up from 89/31):
 `estimateTokens.test.ts`, `metricHelpers.test.ts`, `primaryMetrics.test.ts` (all 5 primary metrics,
 including the context-efficiency success-vs-failure comparison and the zero-verifications edge
 case), `secondaryMetrics.test.ts` (all 9, including the verification-completeness case that
@@ -51,7 +51,7 @@ every one is schema-valid.
 
 ## Validation
 
-- `npm run build && npm test && npm run lint` — clean build, 116/116 tests passing across 45
+- `npm run build && npm test && npm run lint` — clean build, 116/116 tests passing across 37
   files, zero lint errors.
 - `rm -rf dist && npm run build` — confirmed no `*.test.*` files leak into the compiled output.
 - Quantitative modularity check: largest new source file is `secondaryMetrics.ts`/`aggregateMetrics.ts`

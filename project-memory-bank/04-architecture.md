@@ -67,11 +67,15 @@ concrete adapter implementations.
 See [[05-domain-model]] for the canonical entities. Concrete TypeScript types/schemas are Phase 1
 work (Evaluation Contract), not Phase 0.
 
-## Integration mechanism with ECC (future, Phase 6)
+## Integration mechanism with ECC (decided and implemented, Phase 6)
 
-Least-coupled reliable option, decided when Phase 6 is reached: likely CLI invocation or a
-documented artifact contract (ECC produces a context artifact on disk in an agreed schema; EEP
-reads it). Decision deferred — do not pre-implement in Phase 0.
+CLI subprocess invocation: `EccContextProvider` (`src/harness/providers/eccContextProvider.ts`)
+shells out to ECC's own published `ecc context "<task>" --path <dir> [--budget <n>]` command and
+parses/validates its stdout JSON against an independent Zod mirror of ECC's documented
+`EngineeringContextPackage` contract (`eccPackageSchema.ts`) — never an import of ECC's TS
+source. The invoked command is fully configurable (constructor options / `ECC_CLI_COMMAND` env
+var), so no EEP code bakes in a path to any one machine's ECC checkout. See [[phases/phase-06]]
+and ADR-010 in [[14-decisions]] for the full reasoning and trade-offs.
 
 ## Observability & error semantics
 
