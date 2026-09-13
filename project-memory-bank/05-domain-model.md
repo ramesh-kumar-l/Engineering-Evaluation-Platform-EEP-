@@ -30,5 +30,8 @@ changes.
 ## Provider abstraction
 
 `ContextProvider` is the generic interface that both "native agent exploration" and ECC (and any
-future context source, e.g. RAG/memory systems, oracle/human-curated context) implement. See
-[[04-architecture]] and [[09-experiment-strategy]].
+future context source, e.g. RAG/memory systems, oracle/human-curated context) implement. `Agent`
+is the parallel interface every agent implementation satisfies. Both interfaces live under
+`src/domain/providers/`; a first concrete pair (`NativeAgent`, `NativeContextProvider`) was
+implemented in Phase 3 under `src/harness/` — see [[04-architecture]] and
+[[09-experiment-strategy]].

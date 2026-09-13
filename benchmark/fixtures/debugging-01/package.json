@@ -1,0 +1,8 @@
+{
+  "name": "eep-fixture-debugging-01",
+  "private": true,
+  "description": "Self-hosted benchmark fixture for benchmark/tasks/debugging-01.json.",
+  "scripts": {
+    "test": "node pagination.test.js"
+  }
+}

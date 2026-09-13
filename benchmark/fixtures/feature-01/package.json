@@ -1,0 +1,8 @@
+{
+  "name": "eep-fixture-feature-01",
+  "private": true,
+  "description": "Self-hosted benchmark fixture for benchmark/tasks/feature-01.json.",
+  "scripts": {
+    "test": "node reporting.test.js"
+  }
+}

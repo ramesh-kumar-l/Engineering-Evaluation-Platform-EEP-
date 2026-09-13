@@ -8,6 +8,7 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | Module | Status |
 |---|---|
 | `ids.ts` (branded IDs, 14 entities) | Done |
+| `idGenerator.ts` (`generateId<Brand>()`) | Done (Phase 3) |
 | `semver.ts` | Done |
 | `timestamps.ts` | Done |
 | `status.ts` (`RunStatus` taxonomy) | Done |
@@ -35,8 +36,8 @@ Update this whenever a major feature/module is finished, not only at phase bound
 
 | Interface | Status |
 |---|---|
-| `ContextProvider` | Interface defined; no implementation yet (Phase 3/6) |
-| `Agent` | Interface defined; no implementation yet (Phase 3) |
+| `ContextProvider` (now carries `runId` on its request — Phase 3) | Interface defined; first implementation in `src/harness/` (Phase 3); ECC-backed implementation is Phase 6 |
+| `Agent` (now carries `runId` on its request — Phase 3) | Interface defined; first implementation (`NativeAgent`) in `src/harness/` (Phase 3); a real solving agent is later work |
 
 ## src/benchmark/ (Phase 2)
 
@@ -45,23 +46,37 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `loadTasks.ts` (read + validate `benchmark/tasks/*.json` against `taskSchema`) | Done |
 | `index.ts` (barrel) | Done |
 
-## benchmark/ (Phase 2)
+## src/harness/ (Phase 3)
+
+| Module | Status |
+|---|---|
+| `workspace.ts` (`createIsolatedWorkspace` — filesystem-copy sandbox, ADR-007) | Done |
+| `support/listFiles.ts` (shared recursive file listing, capped) | Done |
+| `providers/nativeContextProvider.ts` (`NativeContextProvider`) | Done |
+| `agents/nativeAgent.ts` (`NativeAgent`) | Done |
+| `runHarness.ts` (`executeRun` — Task+Condition+Agent+ContextProvider → Run+Trace) | Done |
+| `index.ts` (barrel) | Done |
+
+## benchmark/ (Phase 2, updated Phase 3)
 
 | Item | Status |
 |---|---|
 | 30 task records, `benchmark/tasks/*.json` | Done — matches [[07-benchmark-strategy]] distribution exactly |
 | Temporal integrity policy | Done — fully specified in [[07-benchmark-strategy]] |
-| Fixture source code, `benchmark/fixtures/<id>/` | Not started — Phase 3 (only a README placeholder exists) |
-| Real pinned `repository.commitSha` per task | Not started — all 30 tasks use the `"unpinned"` sentinel (ADR-006) |
+| Fixture source code, `benchmark/fixtures/<id>/` | 3 of 30 done (`debugging-01`, `feature-01`, `refactoring-01`) — Phase 3; remaining 27 are tracked backlog, see [[20-next-actions]] |
+| Real pinned `repository.commitSha` per task | 3 of 30 done (same 3 tasks, real git SHAs — ADR-007); other 27 use the `"unpinned"` sentinel (ADR-006) |
 
 ## Not started
 
-Fixture repositories + real commit pins (Phase 3), experiment harness (Phase 3), evaluation
-engine (Phase 4), metrics computation (Phase 5), ECC adapter (Phase 6), CLI (Phase 3+),
+Fixture repositories + real commit pins for 27 of 30 tasks (incremental backlog), verification
+execution + Outcome construction (Phase 4), metrics computation (Phase 5), a real solving agent
+and ECC adapter (Phase 6), CLI, container/process-level sandboxing (open risk, see [[16-risks]]),
 reporting/dashboard (Phase 9-10).
 
 ## Verification snapshot
 
-Last run: `npm run build && npm test && npm run lint` — clean build, 53/53 tests passing across
-20 files, zero lint errors. Confirmed no test files leak into `dist/` after `rm -rf dist && npm
-run build`. Re-run this before trusting this ledger; it is a snapshot, not a live status.
+Last run: `npm run build && npm test && npm run lint` — clean build, 67/67 tests passing across
+26 files, zero lint errors. Confirmed no test files leak into `dist/` after `rm -rf dist && npm
+run build`. The compiled `dist/` harness was also manually run end-to-end against the real
+`debugging-01` fixture. Re-run this before trusting this ledger; it is a snapshot, not a live
+status.

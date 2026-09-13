@@ -16,5 +16,11 @@ within a Trace's arrays.
 Configurable redaction (`redactionApplied` on Trace, `redacted` on Evidence/ContextArtifact) is
 modeled now; the actual redaction logic is later phase work (Phase 3+) — see [[11-security]].
 
+**Phase 3 addition:** `agentReportedStatus` (optional `RunStatus`) — the agent's own
+self-reported completion signal, stamped by the harness (`src/harness/runHarness.ts`). It is
+provenance only, never authoritative: only a Verification-backed `Outcome.status` (Phase 4) is
+the true result. Non-breaking addition, no `TRACE_SCHEMA_VERSION` bump — see ADR-007 in
+[[14-decisions]].
+
 This file intentionally does not restate fields — see [[10-reproducibility]] §Independent
 versioning axes.

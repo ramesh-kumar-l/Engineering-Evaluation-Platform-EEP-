@@ -6,7 +6,10 @@
   "description": "The paginate(items, pageSize, pageNumber) utility in the fixture repository returns one fewer item than expected on the final page and occasionally omits the last item entirely when the total count is an exact multiple of pageSize. Diagnose the off-by-one error and correct the slicing boundaries without changing the function's public signature.",
   "category": "debugging",
   "complexity": "L1",
-  "repository": { "url": "benchmark/fixtures/debugging-01", "commitSha": "unpinned" },
+  "repository": {
+    "url": "benchmark/fixtures/debugging-01",
+    "commitSha": "f3518a1481b004c65015428304f9f202f9d801bf"
+  },
   "acceptanceCriteria": [
     "paginate() returns exactly pageSize items for every full page.",
     "The final (possibly partial) page includes every remaining item, with none omitted.",

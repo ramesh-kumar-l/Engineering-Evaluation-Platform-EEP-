@@ -6,7 +6,10 @@
   "description": "Three separate modules each re-implement near-identical email/phone/postal-code validation with subtle inconsistencies (different regexes, different trimming behavior). Extract a single shared validation module used by all three call sites, preserving each call site's externally observable validation behavior for currently-valid and currently-invalid inputs used in existing tests.",
   "category": "refactoring",
   "complexity": "L2",
-  "repository": { "url": "benchmark/fixtures/refactoring-01", "commitSha": "unpinned" },
+  "repository": {
+    "url": "benchmark/fixtures/refactoring-01",
+    "commitSha": "78e0541a234c6e2c360a310aa4ce9ae593b20067"
+  },
   "acceptanceCriteria": [
     "All three call sites import validation logic from one new shared module rather than local copies.",
     "No duplicated validation regex/logic remains in the three original modules.",

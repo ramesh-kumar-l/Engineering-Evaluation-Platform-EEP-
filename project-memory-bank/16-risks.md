@@ -17,5 +17,6 @@ mitigated since no evaluation logic exists).
 | Excessive evaluation cost (time/compute) | Open | To be monitored once the harness (Phase 3) runs real experiments. |
 | Dashboard complexity growing ahead of data-model maturity | Open | Mitigation: dashboard explicitly sequenced after Phase 9 — [[12-dashboard-strategy]]. |
 | False confidence in small-sample results | Open | Mitigation: statistical discipline — [[06-evaluation-methodology]]. |
+| Environment isolation is filesystem-copy only, not container/process sandboxed (ADR-007) | Open | Acceptable while agents only read fixtures (Phase 3); revisit before any agent executes untrusted generated commands — [[phases/phase-03]]. |
 
 Add new risks as they're discovered; never delete a risk row, mark it `Closed` with a reason.

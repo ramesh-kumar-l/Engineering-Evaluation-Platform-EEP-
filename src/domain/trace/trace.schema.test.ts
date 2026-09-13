@@ -20,4 +20,10 @@ describe('traceSchema', () => {
   it('rejects a negative retries count', () => {
     expect(() => traceSchema.parse({ ...validTrace, retries: -1 })).toThrow();
   });
+
+  it('accepts an optional agentReportedStatus and leaves it undefined by default', () => {
+    expect(traceSchema.parse(validTrace).agentReportedStatus).toBeUndefined();
+    const parsed = traceSchema.parse({ ...validTrace, agentReportedStatus: 'INCOMPLETE' });
+    expect(parsed.agentReportedStatus).toBe('INCOMPLETE');
+  });
 });

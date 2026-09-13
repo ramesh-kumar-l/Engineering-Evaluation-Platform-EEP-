@@ -2,7 +2,9 @@
 
 Status: Benchmark V1 complete (Phase 2). 30 tasks exist under `benchmark/tasks/`, one JSON file
 per task, schema-valid against `taskSchema` (`src/domain/task/task.schema.ts`). Loaded and
-validated via `src/benchmark/loadTasks.ts`.
+validated via `src/benchmark/loadTasks.ts`. As of Phase 3, 3 of the 30 have real fixture source
+code and a real pinned `commitSha`; the other 27 remain `"unpinned"` — see the Phase 3 update
+note below.
 
 ## Target size and distribution (~30 tasks)
 
@@ -45,10 +47,15 @@ correctness from test passing.
   GitHub repos) — chosen specifically to satisfy the quality rules below ("avoid benchmark
   contamination", "be reproducible", local-first per [[04-architecture]]) without depending on
   external repo drift or availability.
-- Every Phase 2 task record uses the sentinel `repository.commitSha: "unpinned"`. Actual fixture
+- Every Phase 2 task record used the sentinel `repository.commitSha: "unpinned"`. Actual fixture
   source code and a real pinned commit SHA are **Phase 3 (Experiment Harness)** work — that phase
   owns "environment isolation" per [[13-roadmap]], which is when a real checkout first matters.
   Do not treat `"unpinned"` as a defect; it is the documented Phase 2/3 boundary marker.
+- **Phase 3 update:** 3 of the 30 tasks now have real fixture source code and a real pinned
+  `commitSha` — `debugging-01`, `feature-01`, `refactoring-01` (one per the three largest
+  categories), proving the harness end-to-end (see ADR-007 in [[14-decisions]] for how the SHA
+  was obtained without a nested `.git`). The remaining 27 tasks are still `"unpinned"` —
+  deliberate, tracked backlog (see [[20-next-actions]]), not a defect.
 
 ## Temporal integrity policy (fully specified)
 

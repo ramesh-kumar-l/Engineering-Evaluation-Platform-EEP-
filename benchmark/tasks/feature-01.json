@@ -6,7 +6,10 @@
   "description": "Add an exportToCsv(rows, columns) capability to the reporting module so report data already available as an array of row objects can be downloaded as a correctly escaped CSV file, matching the column order and headers already defined for the on-screen report.",
   "category": "feature",
   "complexity": "L2",
-  "repository": { "url": "benchmark/fixtures/feature-01", "commitSha": "unpinned" },
+  "repository": {
+    "url": "benchmark/fixtures/feature-01",
+    "commitSha": "ab3a126032cbe741d26e3b115a1e943366c37c86"
+  },
   "acceptanceCriteria": [
     "exportToCsv produces a header row matching the provided column definitions in order.",
     "Field values containing commas, quotes, or newlines are correctly quoted/escaped per RFC 4180.",

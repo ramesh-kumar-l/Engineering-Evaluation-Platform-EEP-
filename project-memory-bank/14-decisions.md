@@ -105,3 +105,57 @@ Format: Decision / Context / Options / Chosen approach / Reason / Trade-offs / C
   marker, not a defect — see [[07-benchmark-strategy]] §Benchmark structure. Phase 3 must replace
   it with a real commit SHA once each fixture's source code is authored and committed.
 - **Status:** Accepted.
+
+## ADR-007: Phase 3 environment isolation, fixture commit-SHA method, and two small interface fixes
+
+- **Context:** Phase 3 (Experiment Harness) needed to implement real environment isolation, a
+  concrete `Agent`/`ContextProvider` pair, and — per ADR-006 — replace the `"unpinned"` sentinel
+  with a real `commitSha` for at least a proof set of fixtures.
+- **Options considered (isolation):** (a) container-based sandboxing (Docker), (b) OS-level
+  process sandboxing, (c) filesystem-level isolation — copy the fixture into a disposable temp
+  directory before an agent ever touches it.
+- **Chosen approach (isolation):** (c). `src/harness/workspace.ts`'s `createIsolatedWorkspace()`
+  copies a fixture into a fresh `os.tmpdir()` directory (excluding any `.git`) and returns a
+  `cleanup()` that removes it; every `Agent`/`ContextProvider` call receives only the sandbox
+  path, never the canonical fixture path.
+- **Reason (isolation):** Matches the local-first stance (ADR-004) — no new infrastructure
+  dependency (Docker) before a concrete need (e.g. running untrusted agent-generated code)
+  demonstrates it. Filesystem isolation is sufficient to guarantee a run can never mutate
+  `benchmark/fixtures/` and is trivially reproducible on any contributor's machine.
+- **Trade-offs (isolation):** Does not sandbox CPU/memory/network or protect against a malicious
+  agent executing arbitrary commands — acceptable now because Phase 3's agents (native
+  exploration only) don't execute fixture code; revisit before any agent that runs untrusted
+  generated commands (flagged in [[16-risks]]).
+- **Options considered (commit SHA):** (a) `git init` directly inside
+  `benchmark/fixtures/<id>/`, committed as part of the main EEP repo; (b) build each fixture in a
+  scratch location, `git commit` it there to obtain a real SHA, then copy only the resulting
+  working tree (no `.git`) into `benchmark/fixtures/<id>/`.
+- **Chosen approach (commit SHA):** (b). `debugging-01`, `feature-01`, and `refactoring-01` were
+  authored this way; their `repository.commitSha` is now a real git commit SHA
+  (`f3518a14...`, `ab3a1260...`, `78e0541a...` respectively), computed by an actual `git commit`
+  against that fixture's own content, not fabricated.
+- **Reason (commit SHA):** (a) would embed a nested `.git` directory inside the main repository's
+  tree, which Git treats as an embedded-repository "gitlink" — `git add` in the parent repo
+  would then track only a commit pointer for that directory instead of its files, silently
+  breaking the one-file-per-task / diff-friendly fixture convention from ADR-006. (b) yields an
+  equally real, verifiable commit SHA without that footgun.
+- **Trade-offs (commit SHA):** The ephemeral git repo used to mint the SHA is not itself
+  preserved in EEP's history — only its resulting file tree and the SHA recorded on the task are.
+  This is acceptable: reproducibility requires the pinned *content* to be stable and inspectable
+  (it is, under `benchmark/fixtures/<id>/`), not a replayable git history of how it was authored.
+- **Consequences (commit SHA):** Per the "representative subset" scope agreed with the user for
+  this phase, only 3 of the 30 tasks were converted from `"unpinned"` to a real `commitSha` in
+  Phase 3; the remaining 27 stay `"unpinned"` and are explicit backlog (see [[20-next-actions]]),
+  to be picked up incrementally — most urgently by whichever task Phase 4 (Deterministic
+  Evaluation) first needs to actually execute verification against.
+- **Interface fixes:** Implementing the first real `Agent`/`ContextProvider` adapters surfaced two
+  gaps in the Phase 1 interfaces (`src/domain/providers/agent.ts`,
+  `src/domain/providers/context-provider.ts`), neither of which had an implementation yet to
+  break: (1) `AgentRunRequest` and `ContextProviderRequest` gained a required `runId: RunId` field
+  — without it, an adapter has no way to stamp a schema-valid, correctly-linked `Action`,
+  `Decision`, or `ContextArtifact` (all of which require `runId`). (2) `traceSchema` gained an
+  optional `agentReportedStatus: RunStatus` field — the agent's own self-reported completion
+  signal, captured for provenance; it is never authoritative (only a Verification-backed
+  `Outcome.status`, Phase 4, is) and defaults to absent for backward compatibility, so no
+  `TRACE_SCHEMA_VERSION` bump was needed.
+- **Status:** Accepted.

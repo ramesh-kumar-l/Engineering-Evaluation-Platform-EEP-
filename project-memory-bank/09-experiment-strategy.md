@@ -1,6 +1,11 @@
 # 09 — Experiment Strategy
 
-Status: design target for Phase 3 (Experiment Harness) and Phase 6 (ECC Integration).
+Status: design target for Phase 3 (Experiment Harness) and Phase 6 (ECC Integration). As of
+Phase 3, Condition A's building blocks have a first working implementation:
+`src/harness/agents/nativeAgent.ts` (`NativeAgent`, deterministic repository exploration, no
+code generation) and `src/harness/providers/nativeContextProvider.ts`
+(`NativeContextProvider`, task text + file listing, no curation). Condition B/C/D and a real
+solving agent remain later work (Phase 6+).
 
 ## Initial experiment conditions
 
