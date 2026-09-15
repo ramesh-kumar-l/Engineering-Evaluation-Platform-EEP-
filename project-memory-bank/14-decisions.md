@@ -385,3 +385,73 @@ Format: Decision / Context / Options / Chosen approach / Reason / Trade-offs / C
   comparison run — is still open); it is validated against synthetic fixture data in tests, the
   same way Phase 5's metrics functions were validated before 30 real fixtures existed.
 - **Status:** Accepted.
+
+## ADR-012: Content-level ablation of ECC's package fields as Condition-level treatments, measured by reusing Phase 7's analysis unchanged
+
+- **Context:** Phase 8's exit criterion is per-component measurement of ECC's contribution
+  (project-memory-bank/06-evaluation-methodology.md §Ablation discipline names 7 candidate
+  components: history, memory, ranking, provenance, risk, budgeting, verification). ADR-010's
+  repository-boundary rule means EEP integrates with ECC only through its documented CLI contract
+  (`ecc context "<task>" --path <dir> [--budget <n>]`) — that contract has no flag to disable an
+  internal ECC component, so true inside-ECC ablation is not reachable without violating the
+  boundary rule.
+- **Options considered (ablation mechanism):** (a) treat ablation as out of scope until ECC
+  documents per-component flags; (b) fork/patch a local ECC checkout to add such flags (violates
+  ADR-001's repository-independence rule); (c) ablate at the *content* level — after ECC returns
+  its full, validated `EccContextPackage`, deterministically strip or neutralize exactly one
+  already-present field before it becomes a `ContextArtifact`, holding every other field (and the
+  task/repository/agent) constant.
+- **Chosen approach:** (c). `src/harness/providers/eccAblation.ts` maps each of the 7 named
+  components onto a real, already-validated field of `EccContextPackage`
+  (`eccPackageSchema.ts`) — never a fabricated dimension, matching ADR-009's "only compute from a
+  real data source" discipline: `history`→`history: []`; `memory`→evidence items whose
+  `source === 'memory'` removed from `context.primary`/`context.supporting`; `ranking`→primary and
+  supporting evidence merged into one list ordered by a ranking-independent key (path/identifier)
+  instead of ECC's relevance ordering, with `supporting` emptied; `provenance`→each evidence
+  item's optional `provenance` sub-object stripped; `risk`→`conflicts: []`; `budgeting`→
+  `excluded: []`; `verification`→`verification: []`. `ablatePackage()` is a pure function
+  (`structuredClone` input, never mutates it). `src/harness/providers/
+  ablatedEccContextProvider.ts` (`AblatedEccContextProvider implements ContextProvider`) wraps one
+  component's ablation as its own named Condition (`ecc-ablated:<component>`, via
+  `ablatedConditionName()`) — per project-memory-bank/09-experiment-strategy.md, "the only varying
+  dimension is the ContextProvider," so running the same agent against `EccContextProvider` (the
+  control) and each `AblatedEccContextProvider` (one per component) isolates that component's
+  marginal effect on outcomes. The shared invoke+parse+validate logic both providers need was
+  extracted out of Phase 6's `eccContextProvider.ts` into a new `eccPackageFetcher.ts` (`
+  fetchValidatedEccPackage()`) rather than duplicated.
+- **Reason:** Option (a) would leave Phase 8 permanently blocked on an external project's roadmap;
+  option (b) is categorically disallowed by ADR-001. Option (c) genuinely varies only the named
+  component's information while measuring the same agent against the same task/repository — the
+  same causal-isolation logic already governing Condition design — and every ablated field is one
+  ECC itself already reports as real, not invented by EEP.
+- **Options considered (measurement):** (a) build new statistical/orchestration code specific to
+  ablation; (b) reuse Phase 7's `analyzeRepeatedRuns()` unchanged, since an ablation comparison is
+  structurally identical to any other Condition-vs-baseline comparison it already generalizes to.
+- **Chosen approach (measurement):** (b). `src/analysis/componentContribution.ts`
+  (`analyzeComponentContributions()`) takes a caller-supplied `component → ablated condition name`
+  map (kept decoupled from any specific provider's naming convention, the same one-way-dependency
+  discipline `analysisInput.ts` established), filters the records to just the full-condition and
+  that one ablated condition per component, and calls `analyzeRepeatedRuns()` once per component.
+  No new confidence-interval, effect-size, or insufficient-data logic was written.
+- **Reason (measurement):** Phase 7 was deliberately built to compare an arbitrary baseline
+  against every other condition present in a dataset, across categories/complexity, with explicit
+  `insufficient-data` handling — an ablated-component condition is not a special case of that, so
+  writing new statistics for it would duplicate ADR-011's logic for no benefit.
+- **Trade-offs:** This is content-level, black-box ablation, not a measurement of ECC's actual
+  internal component architecture — if ECC computes a component's contribution in a way that also
+  leaks into another field EEP doesn't strip (e.g. a ranking algorithm's influence surviving in
+  which items were selected as `primary` at all, not just their order), the isolation is
+  imperfect. This is a real, documented limitation, not silently assumed away — see
+  [[phases/phase-08]] and [[16-risks]]. `ranking`'s ablation (reordering by path/identifier) is a
+  judgment call for "what would no-ranking-benefit look like" — a different neutral ordering
+  (e.g. random) was also viable; the alphabetical-by-identity choice was made because it is
+  deterministic and reproducible across runs, per [[10-reproducibility]].
+- **Consequences:** New files (all under 300 lines): `src/harness/providers/eccAblation.ts` (82
+  lines), `ablatedEccContextProvider.ts` (64), `eccPackageFetcher.ts` (31, extracted from
+  `eccContextProvider.ts` with no behavior change — its existing tests pass unmodified), and
+  `src/analysis/componentContribution.ts` (59). No new Zod domain entity and no new statistics —
+  consistent with ADR-011 and ADR-009's precedent of not building infrastructure ahead of a
+  concrete, already-real need. `analyzeComponentContributions()` has not yet been run against real
+  experiment data, for the same reason `analyzeRepeatedRuns()` hasn't (Phase 6's remaining scope
+  is still open) — validated against synthetic fixtures in tests.
+- **Status:** Accepted.

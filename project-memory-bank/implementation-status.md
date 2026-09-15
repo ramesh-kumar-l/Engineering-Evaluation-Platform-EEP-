@@ -56,6 +56,9 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `providers/eccPackageSchema.ts` (independent Zod mirror of ECC's `EngineeringContextPackage` contract, ADR-010) | Done (Phase 6) |
 | `providers/eccCliInvoker.ts` (`ProcessEccCliInvoker` — configurable subprocess wrapper around ECC's `ecc context` CLI, ADR-010) | Done (Phase 6) |
 | `providers/eccContextProvider.ts` (`EccContextProvider implements ContextProvider` — Condition B/C's real ECC-backed source) | Done (Phase 6) |
+| `providers/eccPackageFetcher.ts` (`fetchValidatedEccPackage` — shared invoke+parse+validate, extracted Phase 8) | Done (Phase 8) |
+| `providers/eccAblation.ts` (`ablatePackage` — per-component content-level ablation, ADR-012) | Done (Phase 8) |
+| `providers/ablatedEccContextProvider.ts` (`AblatedEccContextProvider implements ContextProvider` — one ablation Condition per ECC component) | Done (Phase 8) |
 | `agents/nativeAgent.ts` (`NativeAgent`) | Done |
 | `runHarness.ts` (`executeRun` — Task+Condition+Agent+ContextProvider → Run+Trace; carries an optional `onBeforeCleanup` hook (Phase 4) and now also returns the full `contextArtifact` on `HarnessRunOutcome` (Phase 5, ADR-009)) | Done |
 | `index.ts` (barrel) | Done |
@@ -101,6 +104,7 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `repeatedRunAnalysis.ts` (`summarizeGroup`, `compareConditions` — both return `insufficient-data` rather than throwing) | Done |
 | `groupedAnalysis.ts` (`analyzeRepeatedRuns` — the Phase 7 entry point: overall + by-category + by-complexity) | Done |
 | `index.ts` (barrel) | Done |
+| `componentContribution.ts` (`analyzeComponentContributions` — Phase 8 entry point, reuses `analyzeRepeatedRuns` unchanged) | Done (Phase 8) |
 | Failure analysis (4th item in Phase 7's roadmap scope) | Not started — not requested this round, see [[phases/phase-07]] |
 
 ## benchmark/ (Phase 2, updated Phase 3)
@@ -117,15 +121,16 @@ Update this whenever a major feature/module is finished, not only at phase bound
 Fixture repositories + real commit pins for 27 of 30 tasks (incremental backlog), verifiers for
 7 of the 9 `verificationMethod` enum values (add as needed), 8 of 22 named metrics with no data
 source yet (ADR-009), a real solving agent for Condition B/C, an actual multi-condition
-comparison run (Native vs. ECC-backed) against the benchmark (needed before `analyzeRepeatedRuns()`
-has real data to run on), failure analysis (Phase 7 roadmap remainder), CLI, metric/artifact
-persistence to disk, container/process-level sandboxing (open risk, see [[16-risks]]),
-reporting/dashboard (Phase 9-10).
+comparison run (Native vs. ECC-backed, and each ECC-ablated-component condition) against the
+benchmark (needed before `analyzeRepeatedRuns()`/`analyzeComponentContributions()` have real data
+to run on), failure analysis (Phase 7 roadmap remainder), CLI, metric/artifact persistence to
+disk, container/process-level sandboxing (open risk, see [[16-risks]]), reporting/dashboard
+(Phase 9-10).
 
 ## Verification snapshot
 
-Last run: `npm run build && npm test && npm run lint` — clean build, 174/174 tests passing across
-49 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
+Last run: `npm run build && npm test && npm run lint` — clean build, 205/205 tests passing across
+53 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
 that checkout is absent), zero lint errors. Confirmed no test files leak into `dist/` after
 `rm -rf dist && npm run build`.
 Re-run this before trusting this ledger; it is a snapshot, not a live status.

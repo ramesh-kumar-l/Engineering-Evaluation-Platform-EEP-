@@ -1,4 +1,5 @@
 export * from './analysisInput.js';
+export * from './componentContribution.js';
 export * from './confidenceInterval.js';
 export * from './effectSize.js';
 export * from './groupBy.js';

@@ -5,13 +5,8 @@ import type {
   ContextProviderResult,
 } from '../../domain/providers/context-provider.js';
 import { estimateTokenCount } from '../../metrics/estimateTokens.js';
-import {
-  EccInvocationError,
-  ProcessEccCliInvoker,
-  type EccCliInvoker,
-  type EccCliInvokerOptions,
-} from './eccCliInvoker.js';
-import { eccContextPackageSchema } from './eccPackageSchema.js';
+import { ProcessEccCliInvoker, type EccCliInvoker, type EccCliInvokerOptions } from './eccCliInvoker.js';
+import { fetchValidatedEccPackage } from './eccPackageFetcher.js';
 
 export const ECC_CONTEXT_PROVIDER_NAME = 'ecc';
 export const ECC_CONTEXT_PROVIDER_VERSION = '1.0.0';
@@ -41,23 +36,12 @@ export class EccContextProvider implements ContextProvider {
   }
 
   async provideContext(request: ContextProviderRequest): Promise<ContextProviderResult> {
-    const stdout = await this.invoker.invoke(request.repositoryPath, request.task.description);
-
-    let raw: unknown;
-    try {
-      raw = JSON.parse(stdout);
-    } catch (error) {
-      throw new EccInvocationError('ECC CLI did not return valid JSON on stdout', error);
-    }
-
-    const parsed = eccContextPackageSchema.safeParse(raw);
-    if (!parsed.success) {
-      throw new EccInvocationError(
-        `ECC CLI output failed schema validation: ${parsed.error.message}`,
-      );
-    }
-
-    const content = JSON.stringify(parsed.data, null, 2);
+    const pkg = await fetchValidatedEccPackage(
+      this.invoker,
+      request.repositoryPath,
+      request.task.description,
+    );
+    const content = JSON.stringify(pkg, null, 2);
 
     return {
       contextArtifact: {

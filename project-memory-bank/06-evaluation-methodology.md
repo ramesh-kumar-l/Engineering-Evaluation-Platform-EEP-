@@ -44,7 +44,13 @@ and task-category/complexity segmentation — see [[phases/phase-07]] and ADR-01
 
 When decomposing a context provider (e.g. ECC) into components (history, memory, ranking,
 provenance, risk, budgeting, verification), do not assume every component adds value — measure
-each.
+each. As of Phase 8, `src/harness/providers/eccAblation.ts` maps each of these 7 components onto a
+real field of ECC's own documented package contract and produces one ablated `ContextProvider`
+Condition per component (`AblatedEccContextProvider`); `src/analysis/componentContribution.ts`
+(`analyzeComponentContributions()`) measures each one's contribution by reusing Phase 7's
+`analyzeRepeatedRuns()` unchanged — see [[phases/phase-08]] and ADR-012 in [[14-decisions]]. This
+is content-level (black-box) ablation of ECC's CLI output, not a measurement of ECC's actual
+internal architecture — a documented limitation, not an assumed one.
 
 ## Temporal integrity
 

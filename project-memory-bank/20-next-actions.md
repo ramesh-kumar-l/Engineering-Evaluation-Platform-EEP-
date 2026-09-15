@@ -2,22 +2,27 @@
 
 1. **Immediate:** await explicit user approval to proceed with the rest of Phase 6/7's roadmap
    scope (a real solving agent, an actual comparison run, failure analysis) or to move on to
-   Phase 8.
+   Phase 9.
 2. **Phase 6 remainder (not yet done):**
    - Implement a real solving agent (an LLM coding agent) for Condition B/C, replacing
      `NativeAgent` as the "does real work" condition — `NativeAgent` remains the native/no-context
      baseline.
    - Wire Conditions A-D from [[09-experiment-strategy]] to real providers/agents and run an
-     actual controlled comparison (native vs. `EccContextProvider`-assisted) against the
-     benchmark. This is also the prerequisite for Phase 7's `analyzeRepeatedRuns()`
-     (`src/analysis/groupedAnalysis.ts`) to run against real data instead of synthetic fixtures.
-   - `EccContextProvider` currently has no real `tokenCount` from ECC's CLI contract, so it uses
-     Phase 5's `estimateTokenCount()` fallback on the serialized package — revisit if ECC's
-     documented output ever adds one.
+     actual controlled comparison (native vs. `EccContextProvider`-assisted, and each
+     `AblatedEccContextProvider` component variant) against the benchmark. This is also the
+     prerequisite for Phase 7's `analyzeRepeatedRuns()` and Phase 8's
+     `analyzeComponentContributions()` to run against real data instead of synthetic fixtures.
+   - `EccContextProvider`/`AblatedEccContextProvider` currently have no real `tokenCount` from
+     ECC's CLI contract, so both use Phase 5's `estimateTokenCount()` fallback on the serialized
+     package — revisit if ECC's documented output ever adds one.
 2a. **Phase 7 remainder (not yet done):** failure analysis (the 4th item in [[13-roadmap]]'s
    Phase 7 row, alongside repeated-run/category/complexity analysis) — not requested this round's
    exit criterion; add once there is real failure data (from an actual comparison run) to analyze,
    e.g. which `verificationMethod` most often fails, clustered by category/complexity/condition.
+2b. **Phase 8 orchestration (not yet done, not phase-blocking):** nothing yet automatically runs
+   all 7 `AblatedEccContextProvider` component conditions against the benchmark end-to-end — that
+   is an experiment-orchestration concern bundled with item 2's "actual comparison run," not part
+   of Phase 8's exit criterion (the ablation mechanism and measurement).
 3. **Fixture backlog (not phase-blocking, pick up incrementally):** 27 of the 30 tasks still use
    the `"unpinned"` sentinel — only `debugging-01`, `feature-01`, `refactoring-01` have real
    fixture source code, a real `commitSha`, and real verification coverage. Author the rest the
@@ -53,4 +58,11 @@
    limitation in [[phases/phase-07]]), that belongs in Phase 9's reporting layer, not by changing
    `analyzeRepeatedRuns()`'s per-comparison confidence level.
 
-Do not start further Phase 7/8 implementation before approval is given (master prompt §40).
+8. **Ablation convention note (ADR-012):** `src/harness/providers/eccAblation.ts` only ablates
+   fields ECC's documented package contract already reports — never invent a component dimension
+   ECC doesn't actually surface. Ablation is content-level (post-hoc field removal from the CLI's
+   JSON output), not a true inside-ECC per-component toggle, since ECC's CLI contract has no such
+   flag and EEP cannot fork/patch ECC (ADR-001). If ECC's documented contract ever adds a
+   per-component flag, prefer wiring that directly over content-level ablation.
+
+Do not start further Phase 8/9 implementation before approval is given (master prompt §40).
