@@ -3,7 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ExperimentId, RunId } from '../domain/common/ids.js';
-import { defaultResultsDir, readAllRunResults, writeRunResult, type RunResultBundle } from './resultsWriter.js';
+import {
+  defaultResultsDir,
+  latestExperimentId,
+  readAllRunResults,
+  writeRunResult,
+  type RunResultBundle,
+} from './resultsWriter.js';
 
 function fakeBundle(): RunResultBundle {
   return {
@@ -57,5 +63,20 @@ describe('writeRunResult / readAllRunResults', () => {
     const resultsDir = await mkdtemp(join(tmpdir(), 'eep-results-'));
     const results = await readAllRunResults('experiment-does-not-exist' as ExperimentId, resultsDir);
     expect(results).toEqual([]);
+  });
+});
+
+describe('latestExperimentId', () => {
+  it('returns the only experiment subdirectory when just one exists', async () => {
+    const resultsDir = await mkdtemp(join(tmpdir(), 'eep-results-latest-'));
+    const experimentId = 'experiment-only' as ExperimentId;
+    await writeRunResult(fakeBundle(), experimentId, 'run-a' as RunId, resultsDir);
+
+    expect(await latestExperimentId(resultsDir)).toBe(experimentId);
+  });
+
+  it('throws when no experiment subdirectories exist', async () => {
+    const resultsDir = await mkdtemp(join(tmpdir(), 'eep-results-latest-empty-'));
+    await expect(latestExperimentId(resultsDir)).rejects.toThrow();
   });
 });

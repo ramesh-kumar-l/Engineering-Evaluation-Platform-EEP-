@@ -71,15 +71,29 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `runHarness.ts` (`executeRun` — Task+Condition+Agent+ContextProvider → Run+Trace; carries an optional `onBeforeCleanup` hook (Phase 4) and now also returns the full `contextArtifact` on `HarnessRunOutcome` (Phase 5, ADR-009)) | Done — `Run.metadata.modelName`/`modelVersion` still not wired through, see [[20-next-actions]] |
 | `index.ts` (barrel) | Done |
 
-## src/experiments/ (Phase 6 remainder)
+## src/experiments/ (Phase 6 remainder, extended Phase 9)
 
 | Module | Status |
 |---|---|
 | `experimentConditions.ts` (`buildExperimentConditions` — the 9 real conditions: native + full ECC + 7 ablations) | Done |
 | `llmProviderConfigFromEnv.ts` (`llmProviderConfigFromEnv`/`agentBudgetConfigFromEnv` — env-var-driven, no hardcoded default provider) | Done |
-| `resultsWriter.ts` (`writeRunResult`/`readAllRunResults` — raw JSON dump to gitignored `experiment-results/`, not Phase 9's canonical format) | Done |
+| `resultsWriter.ts` (`writeRunResult`/`readAllRunResults`/`latestExperimentId` — raw JSON dump to gitignored `experiment-results/`, a crash-safe write-ahead record, not the canonical Phase 9 artifact) | Done |
 | `runComparisonExperiment.ts` (main loop: 3 real-fixture tasks × 9 conditions × 3 repetitions; runnable via `npm run experiment:run`) | Done — mechanism only; no live run executed yet |
 | `analyzeComparisonResults.ts` (reads dumped bundles back, drives Phase 7 (repeated-run + failure clustering)/8's analysis unchanged; runnable via `npm run experiment:analyze`) | Done — proven against synthetic bundles in tests; not yet run against live data |
+| `generateReport.ts` (reads dumped bundles back, builds+persists the canonical `ReportGraph` via `src/reporting/`; runnable via `npm run report:generate`) | Done (Phase 9) — proven against synthetic bundles in tests; not yet run against live data |
+| `index.ts` (barrel) | Done |
+
+## src/reporting/ (Phase 9)
+
+| Module | Status |
+|---|---|
+| `evaluatedRunInput.ts` (`EvaluatedRunRecord` — structural input type, decoupled from `src/experiments/`'s `RunResultBundle`) | Done |
+| `buildEvaluation.ts` (`buildEvaluation` — first-ever constructor for a schema-valid `Evaluation`; reads `evaluatorVersion` from the run's own metadata) | Done |
+| `dedupeById.ts` (generic id-based dedup helper) | Done |
+| `reportGraph.ts` (`ReportGraph` — a `Report` plus every entity it transitively references, deduplicated by id) | Done |
+| `buildReport.ts` (`buildReport` — the Phase 9 entry point: evaluated runs → `ReportGraph`) | Done |
+| `traceEvaluation.ts` (`traceEvaluation` — drills one Evaluation down to its full backing chain, `BrokenReportGraphError` on a broken graph) | Done |
+| `reportWriter.ts` (`writeReport`/`readReport` — persists to gitignored `reports/<experimentId>/report.json`) | Done |
 | `index.ts` (barrel) | Done |
 
 ## src/evaluation/ (Phase 4)
@@ -144,20 +158,18 @@ source yet (ADR-009), **executing a live comparison run** (the mechanism — `Ll
 `src/experiments/` — is Done, but no one has run it against a real LLM backend yet; needs the
 user's own credentials and a deliberate `npm run experiment:run`), `Run.metadata.modelName`/
 `modelVersion` population (small additive `runHarness.ts` change, see [[20-next-actions]]),
-a general-purpose CLI, Phase 9's canonical Report/persistence format (`experiment-results/` is a
-plain JSON dump, not that), container/process-level sandboxing (open risk, see [[16-risks]]),
-reporting/dashboard (Phase 9-10).
+a general-purpose CLI, container/process-level sandboxing (open risk, see [[16-risks]]),
+CSV/Markdown/HTML report export formats (remaining Phase 9 roadmap scope beyond this round's
+canonical entity/persistence exit criterion), dashboard (Phase 10).
 
 ## Verification snapshot
 
-Last run: `npm run build && npm test && npm run lint` — clean build, 266/266 tests passing across
-65 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
+Last run: `npm run build && npm test && npm run lint` — clean build, 284/284 tests passing across
+71 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
 that checkout is absent), zero lint errors. Confirmed no test files leak into `dist/` after
-`rm -rf dist && npm run build`; the two CLI entry points
-(`dist/experiments/runComparisonExperiment.js`, `dist/experiments/analyzeComparisonResults.js`)
-compiled correctly. Also ran `npx tsc --noEmit` directly against the new/edited test files (test
-files are excluded from the normal `npm run build`/`npm test` type-check, a pre-existing project
-convention — see [[phases/phase-06]]'s remainder section) to catch anything the normal pipeline
-wouldn't; clean. Largest new/edited file (Phase 7 remainder) is `failureClustering.ts` at 158
-lines, comfortably under the 300-line ceiling.
+`rm -rf dist && npm run build`; all three CLI entry points
+(`dist/experiments/runComparisonExperiment.js`, `dist/experiments/analyzeComparisonResults.js`,
+`dist/experiments/generateReport.js`) compiled correctly. Largest new/edited file (Phase 9) is
+`src/experiments/generateReport.ts` at 78 lines; largest in `src/reporting/` is
+`traceEvaluation.ts` at 66 lines — both comfortably under the 300-line ceiling.
 Re-run this before trusting this ledger; it is a snapshot, not a live status.

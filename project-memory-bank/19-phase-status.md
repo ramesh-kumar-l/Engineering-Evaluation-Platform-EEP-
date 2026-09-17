@@ -11,7 +11,7 @@
 | 6 — ECC Integration | Complete (ContextProvider, LLM solving agent, comparison-run mechanism — full roadmap scope); no live comparison run executed yet |
 | 7 — Experimental Analysis | Complete (confidence intervals + effect size across categories/complexity, plus failure clustering by verificationMethod/condition/category/complexity — full roadmap scope), pending user approval to proceed |
 | 8 — Ablation | Complete (per-component measurement of ECC's contribution), pending user approval to proceed |
-| 9 — Reporting | Not started |
+| 9 — Reporting | Complete (canonical `Report`/`ReportGraph` persistence with full Runs→Metrics→Evidence traceability — this round's scope); CSV/Markdown/HTML formats remain roadmap backlog |
 | 10 — Dashboard Feasibility / MVP | Not started |
 | 11 — Public Benchmark | Not started |
 | 12 — External Reproduction | Not started |
@@ -38,3 +38,14 @@ row exactly and is fully built (the ablation mechanism plus measurement). Phase 
 `src/experiments/analyzeComparisonResults.ts` and proven correct against synthetic bundles in
 tests, but none has run against a live-executed comparison's real data yet, since no live run has
 been executed (see above).
+
+Phase 9's exit criterion this round was narrowed by the user to the canonical `Report`
+entity/persistence format itself (not [[13-roadmap]]'s full "JSON, CSV, Markdown, HTML" row).
+`src/reporting/`'s `buildReport()` constructs a self-contained `ReportGraph` — a schema-valid
+`Report` plus every `Evaluation`/`Run`/`Trace`/`Outcome`/`Metric`/`Verification`/`Evidence`/
+`ContextArtifact` it references, deduplicated by id — and `src/experiments/generateReport.ts`
+persists it to `reports/<experimentId>/report.json`, replacing the raw `experiment-results/` dump
+as the canonical, citable artifact (that dump is kept only as a crash-safe write-ahead record
+during a live run — see ADR-014). Like Phase 7/8, this has not yet run against real comparison
+data since no live run has been executed; validated against synthetic evaluated-run fixtures in
+tests.

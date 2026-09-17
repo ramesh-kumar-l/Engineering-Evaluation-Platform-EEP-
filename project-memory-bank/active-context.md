@@ -5,13 +5,38 @@ source code, if picking this project back up after a break.
 
 ## Where things stand right now
 
-Phase 0 (Foundation) through Phase 8 (Ablation) are complete. Phase 6's full roadmap scope (real
-solving agent + actual comparison-run mechanism) is closed — see below. Phase 7 is now complete
-against its *entire* roadmap row, including failure clustering (see below) — not just the
-confidence-intervals-and-effect-size scope from the round that first implemented it. Phase 8
-(Ablation) is implemented and verified, scoped to per-component measurement of ECC's contribution.
+Phase 0 (Foundation) through Phase 9 (Reporting) are complete. Phase 6's full roadmap scope (real
+solving agent + actual comparison-run mechanism) is closed — see below. Phase 7 is complete against
+its *entire* roadmap row, including failure clustering — not just the confidence-intervals-and-
+effect-size scope from the round that first implemented it. Phase 8 (Ablation) is implemented and
+verified, scoped to per-component measurement of ECC's contribution. Phase 9 (Reporting) is
+implemented and verified, scoped to the canonical `Report`/`ReportGraph` persistence format with
+full Runs→Metrics→Evidence traceability (see below) — CSV/Markdown/HTML export remain roadmap
+backlog.
 
-**Phase 7 remainder (this session):** `src/analysis/failureClustering.ts`'s
+**Phase 9 (this session):** `src/reporting/` (new, pure — depends only on `src/domain/`, the same
+one-way-dependency discipline ADR-011 established for `src/analysis/`) gives EEP its first-ever
+constructor for a schema-valid `Evaluation` record (`buildEvaluation.ts` — `evaluationSchema`
+existed unused since Phase 1) and a `buildReport()` (`buildReport.ts`) that assembles a
+self-contained `ReportGraph`: a schema-valid `Report` plus every `Evaluation`/`Run`/`Trace`/
+`Outcome`/`Metric`/`Verification`/`Evidence`/`ContextArtifact` it transitively references,
+deduplicated by id. `traceEvaluation()` (`traceEvaluation.ts`) is the concrete drill-down reader
+implementing [[12-dashboard-strategy]]'s "no black-box KPI" design principle — given a graph and
+an `EvaluationId`, it resolves the full backing chain (run, trace, outcome, metrics,
+verifications, evidence) purely by id lookup, throwing `BrokenReportGraphError` on a broken/
+hand-edited graph rather than returning a silent partial trace. `src/experiments/
+generateReport.ts` (new, `npm run report:generate`) reads the raw `experiment-results/` dump back
+(same source `analyzeComparisonResults.ts` reads) and persists the canonical `ReportGraph` to
+`reports/<experimentId>/report.json` — the artifact meant for actual citation/consumption,
+replacing the raw dump as the thing anyone should read directly. The raw per-run dump itself is
+kept unchanged, now documented as a crash-safe write-ahead record for a long live run, not the
+canonical output. `latestExperimentId()` was extracted out of `analyzeComparisonResults.ts` into
+`resultsWriter.ts` (no behavior change) so both scripts share it. Proven correct against synthetic
+evaluated-run fixtures in tests (19 new tests across 6 new/edited test files) — like the rest of
+Phase 7/8, not yet run against a live comparison's real data. Full detail in [[phases/phase-09]]
+and ADR-014 in [[14-decisions]].
+
+**Phase 7 remainder:** `src/analysis/failureClustering.ts`'s
 `analyzeFailureClusters()` is the 4th item [[13-roadmap]]'s Phase 7 row always included — which
 `verificationMethod`s fail most often, clustered overall and by condition/task category/
 complexity. It reuses the *same* Wilson-interval machinery (`proportionConfidenceInterval()`,
@@ -26,7 +51,7 @@ in tests (`failureClustering.test.ts`, 8 tests, plus an extension to
 `analyzeComparisonResults.test.ts`) — like the rest of Phase 7/8, not yet run against a live
 comparison's real data. Full detail in [[phases/phase-07]]'s remainder section.
 
-**Phase 6 remainder (this session):** `src/harness/llm/` gives EEP a real, multi-provider LLM
+**Phase 6 remainder:** `src/harness/llm/` gives EEP a real, multi-provider LLM
 client layer (ADR-013 in [[14-decisions]]) — `AnthropicLlmClient` (Claude) and
 `OpenAiCompatibleLlmClient` (one implementation covering ChatGPT, Gemini's OpenAI-compatibility
 endpoint, and any local OpenAI-compatible server, by configuration alone), assembled via
@@ -94,24 +119,27 @@ named metrics have no real data source yet (ADR-009) — though ECC's per-item
 relevance/trustLevel/authority/freshness data is now available inside `ContextArtifact.content` as
 a future (not yet wired) source for 4 of those 8. ECC's ablation is content-level
 (post-hoc field removal from its CLI output), not a measurement of ECC's real internal component
-architecture — see ADR-012's trade-offs and [[phases/phase-08]]'s known limitations. No
-metric/artifact/analysis persistence to disk beyond the Phase 6-remainder's plain gitignored
-`experiment-results/` JSON dump (everything else Phases 3-8 produce is computed in-memory and
-returned to the caller — there is no CLI or storage layer yet, and `experiment-results/` is
-explicitly not Phase 9's canonical format). No container/process-level sandboxing (isolation is
+architecture — see ADR-012's trade-offs and [[phases/phase-08]]'s known limitations. A canonical
+`Report`/`ReportGraph` now exists (Phase 9, `src/reporting/`) and persists to gitignored
+`reports/<experimentId>/report.json`, but Phase 7/8's statistical analysis output
+(`RepeatedRunAnalysisReport`/`ComponentContribution[]`/`FailureClusterReport`) is *not* folded into
+it yet — `analyzeComparisonResults.ts`'s output stays console-only, in-memory. No CSV/Markdown/HTML
+report export formats exist yet (remaining [[13-roadmap]] Phase 9 scope). No general-purpose CLI or
+dashboard exist yet (Phase 10+). No container/process-level sandboxing (isolation is
 filesystem-copy only; `testSuiteVerifier` and the solving agent's `run_tests` tool both spawn real
 child processes with only a wall-clock timeout — narrowed but not closed, see [[16-risks]]). Do not
 assume any of these exist without checking `implementation-status.md` first.
 
 ## Immediate next step
 
-Per the master prompt's strict phase gate, this Phase 7-remainder work's completion is reported to
-the user and no further Phase 9 work or live run has started. Do not begin further work, and do
-not execute a live comparison run, without an explicit new approval message from the user, even if
+Per the master prompt's strict phase gate, this Phase 9 work's completion is reported to the user
+and no further Phase 10 work or live run has started. Do not begin further work, and do not
+execute a live comparison run, without an explicit new approval message from the user, even if
 this file is being read in a fresh session — see [[20-next-actions]] and [[00-project-charter]]
-§Working protocol. Phases 6, 7, and 8 are now all fully complete against their roadmap scope; the
-next open items are: executing a live comparison run (needs the user's own LLM credentials and an
-explicit go-ahead), or Phase 9 (Reporting).
+§Working protocol. Phases 6, 7, 8, and 9 are now all fully complete against this round's scope;
+the next open items are: executing a live comparison run (needs the user's own LLM credentials and
+an explicit go-ahead), Phase 10 (Dashboard), or the remaining Phase 9 roadmap scope
+(CSV/Markdown/HTML export).
 
 ## Process reminders for whoever (human or agent) picks this up
 
@@ -171,3 +199,9 @@ explicit go-ahead), or Phase 9 (Reporting).
   every new filesystem tool must resolve its path argument through `resolveWorkspacePath()` (or
   equivalent) and reject anything that escapes the workspace root, since tool-call arguments come
   from model output and are untrusted input.
+- Reporting convention (ADR-014): `src/reporting/` depends only on `src/domain/` — never import
+  from `src/experiments/`/`harness`/`evaluation`; `src/experiments/generateReport.ts` is the one
+  place that adapts `RunResultBundle` into `EvaluatedRunRecord`. `experiment-results/`'s per-run
+  dump is a crash-safe write-ahead record, not the canonical artifact — `reports/<experimentId>/
+  report.json` is. `Evaluation.evaluatorVersion` must come from the run's own recorded
+  `metadata.evaluatorVersion`, never a separately-supplied parameter that could drift from it.

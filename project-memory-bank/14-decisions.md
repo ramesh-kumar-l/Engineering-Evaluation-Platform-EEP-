@@ -564,3 +564,102 @@ Format: Decision / Context / Options / Chosen approach / Reason / Trade-offs / C
   change), `src/harness/index.ts` (barrel additions), `package.json` (`experiment:run`/
   `experiment:analyze` scripts), `.gitignore` (`experiment-results/`). No existing schema changed.
 - **Status:** Accepted.
+
+## ADR-014: Canonical Report persistence as a self-contained `ReportGraph`, built by a new pure `src/reporting/` layer decoupled from `src/experiments/`
+
+- **Context:** Phase 9's exit criterion, as scoped by the user this round: a canonical `Report`
+  schema/persistence format — a `Report` entity that aggregates Runs→Metrics→Evidence with full
+  traceability, replacing `experiment-results/`'s raw per-run JSON dump
+  (project-memory-bank/13-roadmap.md Phase 9 row; ADR-013's own note that "Phase 9's canonical
+  Report/persistence format doesn't exist yet"). `reportSchema` (Zod) already existed from Phase 1
+  (`src/domain/report/report.schema.ts`) but nothing had ever constructed a schema-valid `Report`
+  or the `Evaluation` records it references — `evaluationSchema` also existed unused since Phase 1.
+- **Options considered (what "full traceability" persists):** (a) persist only the thin `Report`
+  record itself (id, experimentId, title, evaluationIds, limitations, generatedAt), leaving
+  `evaluationIds` as floating references a reader must separately resolve against
+  `experiment-results/`; (b) persist one self-contained `ReportGraph` object — the `Report` plus
+  every `Evaluation`/`Run`/`Trace`/`Outcome`/`Metric`/`Verification`/`Evidence`/`ContextArtifact`
+  it (transitively) references, deduplicated by id, in the same JSON file.
+- **Chosen approach:** (b). `src/reporting/reportGraph.ts` defines `ReportGraph`; `src/reporting/
+  buildReport.ts` (`buildReport()`) builds one `Evaluation` per evaluated run
+  (`buildEvaluation.ts`), validates the `Report` via `reportSchema.parse`, and assembles the full
+  graph with `dedupeById.ts`. `src/reporting/traceEvaluation.ts` (`traceEvaluation()`) is the
+  concrete drill-down reader implementing project-memory-bank/12-dashboard-strategy.md's design
+  principle ("Why should I trust this result? ... No black-box KPI.") — given a graph and an
+  `EvaluationId`, it resolves the full chain (run, trace, outcome, metrics, verifications,
+  evidence) purely by id lookup within the same object, throwing `BrokenReportGraphError` if a
+  referenced id is missing (should never happen for a graph `buildReport()` produced; catches a
+  hand-edited or corrupted `report.json` loudly instead of silently returning a partial trace).
+- **Reason:** project-memory-bank/10-reproducibility.md is explicit: "Every public claim EEP
+  produces... must be traceable back through report → aggregate metric → individual run → trace →
+  evidence → evaluation decision." Option (a) would leave that chain only as loose, unenforced ids
+  a reader has to separately look up (and could easily fail to find, e.g. if the raw dump were
+  later deleted) — the opposite of a *canonical* artifact. Option (b) makes every citable claim in
+  a `Report` resolvable from that one file alone, with no dependency on `experiment-results/`
+  still existing.
+- **Options considered (where the new code lives / evaluatorVersion source):** (a) put the Report
+  builder inside `src/experiments/` next to `resultsWriter.ts`/`analyzeComparisonResults.ts`,
+  since that's the only current producer of evaluated-run data; (b) a new top-level
+  `src/reporting/` module depending only on `src/domain/`, with a structural input type
+  (`EvaluatedRunRecord`, `evaluatedRunInput.ts`) decoupled from `src/experiments/`'s
+  `RunResultBundle` — the same one-way-dependency discipline ADR-011 established for
+  `src/analysis/` (`RunAnalysisRecord`/`RunVerificationRecord`, decoupled from `harness`/
+  `evaluation` types).
+- **Chosen approach:** (b), matching ADR-011's precedent exactly. `src/reporting/` depends only on
+  `src/domain/`; `src/experiments/generateReport.ts` (the new Phase 9 entry-point script, parallel
+  to `runComparisonExperiment.ts`/`analyzeComparisonResults.ts`) reads raw bundles via
+  `resultsWriter.ts`'s `readAllRunResults()`, adapts each `RunResultBundle` into an
+  `EvaluatedRunRecord` (drops the orchestration-only `conditionName`/`taskId`/`taskCategory`/
+  `taskComplexity` labels — a Report's traceability runs through `Run.conditionId`/`Run.taskId`,
+  not a human-readable label), and calls `buildReport()`/`writeReport()`. `Evaluation.
+  evaluatorVersion` is read from `record.run.metadata.evaluatorVersion` (already-recorded
+  reproducibility metadata, project-memory-bank/10-reproducibility.md) rather than passed as a
+  second, independently-suppliable parameter that could drift from what the Run itself claims.
+- **Reason:** `src/reporting/` being a pure, reusable layer over `src/domain/` alone means a
+  `Report` can be built from any evaluated-run data, not only `src/experiments/`'s specific
+  comparison-run orchestration — the same reusability argument ADR-011 made for
+  `src/analysis/`. This also keeps the dependency graph acyclic:
+  `src/experiments` → `src/reporting` (and → `src/analysis`), never the reverse.
+- **Options considered (relationship to `experiment-results/`'s raw dump):** (a) delete/replace
+  `resultsWriter.ts`'s per-run write entirely, accumulating all runs in memory and writing only
+  the final `ReportGraph`; (b) keep the existing per-run write exactly as-is as a crash-safe
+  write-ahead record during a long live run (an LLM-backed comparison run can take a long time and
+  fail partway through), and add the canonical `ReportGraph` as a new, separate, later
+  finalization step (`generateReport.ts` / `npm run report:generate`) a caller runs once all raw
+  bundles exist.
+- **Chosen approach:** (b). `resultsWriter.ts`'s `RunResultBundle`/`writeRunResult()`/
+  `readAllRunResults()` are unchanged in behavior (only `latestExperimentId()` was extracted out of
+  `analyzeComparisonResults.ts` into `resultsWriter.ts` so `analyzeComparisonResults.ts` and the
+  new `generateReport.ts` share one implementation instead of duplicating it — no behavior change,
+  existing tests pass unmodified). Its doc-comment now explains it is a write-ahead record, not the
+  canonical output.
+- **Reason:** Discarding per-run incremental writes would mean a long live run that crashes at run
+  60 of 81 loses everything with no partial artifact — a real operational risk for LLM-backed runs
+  (ADR-013). Keeping both, with the `ReportGraph` as the one artifact meant for actual
+  citation/consumption, satisfies "replacing the raw dump" as *the canonical/authoritative format*
+  without removing a genuine crash-safety mechanism a later phase would have to reinvent.
+- **Trade-offs:** This round's exit criterion was explicitly narrowed by the user to the `Report`
+  entity/persistence format itself — CSV/Markdown/HTML export ([[13-roadmap]]'s full Phase 9 row)
+  is not built this round; a `ReportGraph` is JSON only. Folding Phase 7/8's statistical analysis
+  output (`RepeatedRunAnalysisReport`/`ComponentContribution[]`/`FailureClusterReport`) into the
+  persisted `Report` was considered and deliberately deferred — it would duplicate scope already
+  covered by `analyzeComparisonResults.ts`'s console output and isn't part of this round's literal
+  exit criterion (Runs→Metrics→Evidence traceability, not interpreted statistics); a natural
+  follow-up, not silently done. `ReportGraph` is currently a plain TypeScript interface, not a 15th
+  schema-versioned domain entity — only its embedded `report` field is a real, versioned domain
+  entity (`reportSchema`); the graph wrapper itself has no independent version, matching how
+  `ComparisonAnalysisResult` (Phase 6-remainder) is also an unversioned plain wrapper around
+  versioned pieces.
+- **Consequences:** New `src/reporting/*.ts` (all under 300 lines; largest is `traceEvaluation.ts`
+  at 66): `dedupeById.ts`, `reportGraph.ts`, `evaluatedRunInput.ts`, `buildEvaluation.ts`,
+  `buildReport.ts`, `traceEvaluation.ts`, `reportWriter.ts`, `index.ts`. New
+  `src/experiments/generateReport.ts` (78 lines) plus `npm run report:generate` script and a new
+  gitignored `reports/` output directory (parallel to `experiment-results/`). Edited (no behavior
+  change): `src/experiments/resultsWriter.ts` (`latestExperimentId()` extracted, exported, doc
+  comment updated), `src/experiments/analyzeComparisonResults.ts` (imports the extracted function
+  instead of a local copy), `src/experiments/index.ts` (barrel addition). No existing schema
+  changed — `REPORT_SCHEMA_VERSION`/`EVALUATION_SCHEMA_VERSION` both stay `1.0.0`. Like Phase 7/8
+  before it, `buildReport()`/`generateReport()` have not yet run against a real live comparison
+  run's data (none has been executed yet — Phase 6's remaining scope); validated against synthetic
+  evaluated-run fixtures in tests (19 new tests across 6 new/edited test files, 284 total).
+- **Status:** Accepted.

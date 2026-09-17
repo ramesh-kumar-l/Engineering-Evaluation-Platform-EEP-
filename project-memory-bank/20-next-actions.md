@@ -1,8 +1,10 @@
 # 20 — Next Actions
 
 1. **Immediate:** await explicit user approval to proceed with executing a live comparison run
-   (item 2 below) or Phase 9. Phase 7's roadmap scope (including failure analysis, item 2a below)
-   and Phase 8's orchestration follow-up (item 2b below) are now both fully implemented.
+   (item 2 below), Phase 10, or the remaining Phase 9 roadmap scope (item 2c below). Phase 7's
+   roadmap scope (including failure analysis, item 2a below), Phase 8's orchestration follow-up
+   (item 2b below), and Phase 9's canonical Report/persistence format (item 2c below) are now all
+   fully implemented.
 2. **Phase 6 remainder — now implemented, live execution still open:**
    - `LlmSolvingAgent` (`src/harness/agents/llmSolvingAgent.ts`) is the real, LLM-backed solving
      agent, supporting Claude, ChatGPT, Gemini, or a local model via `src/harness/llm/` (ADR-013
@@ -45,6 +47,21 @@
    all 7 `AblatedEccContextProvider` component conditions (plus native and full ECC) and
    `runComparisonExperiment.ts` runs every one against the benchmark end-to-end. As with item 2,
    the mechanism is built and tested but has not yet been executed against a live LLM backend.
+2c. **Phase 9 — now implemented:** `src/reporting/`'s `buildReport()` builds a self-contained
+   `ReportGraph` (a schema-valid `Report` plus every `Evaluation`/`Run`/`Trace`/`Outcome`/`Metric`/
+   `Verification`/`Evidence`/`ContextArtifact` it references, deduplicated by id) from a set of
+   evaluated runs, and `traceEvaluation()` drills one `Evaluation` down to its full backing chain
+   — the concrete implementation of [[12-dashboard-strategy]]'s "no black-box KPI" principle.
+   `src/experiments/generateReport.ts` (`npm run report:generate`) reads the raw
+   `experiment-results/` dump back and persists the canonical artifact to
+   `reports/<experimentId>/report.json`. See ADR-014 in [[14-decisions]] and
+   [[phases/phase-09]]. **Not yet done, remaining Phase 9 roadmap scope:** CSV/Markdown/HTML
+   export formats ([[13-roadmap]]'s full Phase 9 row lists "JSON, CSV, Markdown, HTML"; this
+   round's user-specified exit criterion was narrowed to the canonical entity/persistence format
+   itself) — pick up when a concrete consumer needs a non-JSON format, per the project's
+   "don't build ahead of a real need" discipline (ADR-004/ADR-009). Also not yet done: folding
+   Phase 7/8's statistical analysis output into the persisted Report (currently
+   `analyzeComparisonResults.ts`'s output stays console-only, in-memory).
 3. **Fixture backlog (not phase-blocking, pick up incrementally):** 27 of the 30 tasks still use
    the `"unpinned"` sentinel — only `debugging-01`, `feature-01`, `refactoring-01` have real
    fixture source code, a real `commitSha`, and real verification coverage. Author the rest the
@@ -76,9 +93,10 @@
 7. **Statistics convention note (ADR-011):** `src/analysis/` supports exactly three confidence
    levels (90%/95%/99%), each backed by an exact published critical value — do not add a new
    level without adding its exact table value, and do not replace the table with an approximated
-   inverse-distribution formula. To add multiple-comparisons correction (flagged as a known
-   limitation in [[phases/phase-07]]), that belongs in Phase 9's reporting layer, not by changing
-   `analyzeRepeatedRuns()`'s per-comparison confidence level.
+   inverse-distribution formula. Multiple-comparisons correction (flagged as a known limitation in
+   [[phases/phase-07]] and still not implemented in [[phases/phase-09]]) belongs in a `Report`'s
+   `limitations`/reporting layer, not by changing `analyzeRepeatedRuns()`'s per-comparison
+   confidence level.
 
 8. **Ablation convention note (ADR-012):** `src/harness/providers/eccAblation.ts` only ablates
    fields ECC's documented package contract already reports — never invent a component dimension
@@ -99,5 +117,14 @@
    `agentBudgetConfigFromEnv()` for the agent's own turn/token/wall-clock budget env vars
    (`EEP_AGENT_MAX_TURNS`, `EEP_LLM_MAX_TOKENS`, `EEP_AGENT_WALL_CLOCK_BUDGET_MS`).
 
-Do not start Phase 9 implementation, and do not execute a live comparison run, before approval is
-given (master prompt §40).
+10. **Reporting convention note (ADR-014):** `src/reporting/` depends only on `src/domain/` — it
+   never imports from `src/experiments/`/`harness`/`evaluation`, the same one-way-dependency
+   discipline ADR-011 established for `src/analysis/`. `src/experiments/generateReport.ts` is the
+   one place that adapts `RunResultBundle` into `EvaluatedRunRecord`; keep that adaptation there,
+   not inside `src/reporting/`. `experiment-results/`'s per-run dump is a crash-safe write-ahead
+   record, not the canonical artifact — `reports/<experimentId>/report.json` is; don't treat the
+   raw dump as something a report reader/dashboard should read directly.
+
+Do not execute a live comparison run before approval is given (master prompt §40). Phase 10
+(Dashboard) and the remaining Phase 9 roadmap scope (item 2c above) also await explicit approval
+before implementation starts.

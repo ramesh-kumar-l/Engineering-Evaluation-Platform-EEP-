@@ -1,5 +1,3 @@
-import { readdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { RunAnalysisRecord } from '../analysis/analysisInput.js';
 import { analyzeComponentContributions, type ComponentContribution } from '../analysis/componentContribution.js';
@@ -10,7 +8,7 @@ import type { ConfidenceLevel } from '../analysis/tDistribution.js';
 import type { ExperimentId } from '../domain/common/ids.js';
 import { PRIMARY_METRIC_NAMES, type MetricName } from '../domain/metric/metric.schema.js';
 import { ablatedConditionName, ECC_ABLATION_COMPONENTS } from '../harness/providers/eccAblation.js';
-import { defaultResultsDir, readAllRunResults } from './resultsWriter.js';
+import { defaultResultsDir, latestExperimentId, readAllRunResults } from './resultsWriter.js';
 
 const DEFAULT_CONFIDENCE_LEVEL: ConfidenceLevel = 0.95;
 const BASELINE_CONDITION_NAME = 'native';
@@ -22,23 +20,6 @@ export interface ComparisonAnalysisResult {
   readonly repeatedRunReport: RepeatedRunAnalysisReport;
   readonly componentReports: readonly ComponentContribution[];
   readonly failureClusterReport: FailureClusterReport;
-}
-
-/** Finds the most recently written experiment subdirectory under `resultsDir`, for when no `experimentId` is given. */
-async function latestExperimentId(resultsDir: string): Promise<ExperimentId> {
-  const entries = await readdir(resultsDir, { withFileTypes: true }).catch(() => []);
-  const dirs = entries.filter((entry) => entry.isDirectory());
-  if (dirs.length === 0) {
-    throw new Error(`No experiment results found under ${resultsDir}`);
-  }
-  const withMtime = await Promise.all(
-    dirs.map(async (entry) => ({
-      name: entry.name,
-      mtimeMs: (await stat(join(resultsDir, entry.name))).mtimeMs,
-    })),
-  );
-  withMtime.sort((a, b) => b.mtimeMs - a.mtimeMs);
-  return withMtime[0]!.name as ExperimentId;
 }
 
 /**
