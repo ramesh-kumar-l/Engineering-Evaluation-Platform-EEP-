@@ -1,17 +1,34 @@
 # 20 — Next Actions
 
-1. **Immediate:** await explicit user approval to proceed with the rest of Phase 6/7's roadmap
-   scope (a real solving agent, an actual comparison run, failure analysis) or to move on to
-   Phase 9.
-2. **Phase 6 remainder (not yet done):**
-   - Implement a real solving agent (an LLM coding agent) for Condition B/C, replacing
-     `NativeAgent` as the "does real work" condition — `NativeAgent` remains the native/no-context
-     baseline.
-   - Wire Conditions A-D from [[09-experiment-strategy]] to real providers/agents and run an
-     actual controlled comparison (native vs. `EccContextProvider`-assisted, and each
-     `AblatedEccContextProvider` component variant) against the benchmark. This is also the
-     prerequisite for Phase 7's `analyzeRepeatedRuns()` and Phase 8's
-     `analyzeComponentContributions()` to run against real data instead of synthetic fixtures.
+1. **Immediate:** await explicit user approval to proceed with the rest of Phase 7's roadmap scope
+   (failure analysis), Phase 8's orchestration follow-up (item 2b below), executing a live
+   comparison run (item 2 below), or Phase 9.
+2. **Phase 6 remainder — now implemented, live execution still open:**
+   - `LlmSolvingAgent` (`src/harness/agents/llmSolvingAgent.ts`) is the real, LLM-backed solving
+     agent, supporting Claude, ChatGPT, Gemini, or a local model via `src/harness/llm/` (ADR-013
+     in [[14-decisions]]). It runs under **every** condition in the real comparison, including the
+     native baseline — `NativeAgent` is *not* the baseline agent there; only the `ContextProvider`
+     varies (native/ECC/each ablated component), per [[09-experiment-strategy]]'s causal-isolation
+     principle. This corrects this item's earlier wording, which literally said `NativeAgent`
+     "remains the native/no-context baseline" — see ADR-013 for the full reasoning. `NativeAgent`
+     is unmodified and still used only in its own harness-plumbing tests.
+   - `src/experiments/runComparisonExperiment.ts` runs the actual controlled comparison (native +
+     full ECC + each `AblatedEccContextProvider` component = 9 conditions) × the 3 real-fixture
+     tasks × 3 repetitions, and `src/experiments/analyzeComparisonResults.ts` feeds the results
+     into Phase 7's `analyzeRepeatedRuns()` and Phase 8's `analyzeComponentContributions()`
+     unchanged. **Not yet done:** actually *executing* this against a live LLM backend — that
+     needs the user's own credentials/local server (`EEP_LLM_PROVIDER`/`EEP_LLM_MODEL`/
+     `EEP_LLM_API_KEY`/`EEP_LLM_BASE_URL`, see `llmProviderConfigFromEnv.ts`) and a deliberate
+     `npm run experiment:run` (then `npm run experiment:analyze`), which this implementation does
+     not trigger automatically. See [[phases/phase-06]].
+   - `Run.metadata.modelName`/`modelVersion` (required per [[10-reproducibility]]) are still not
+     populated — `HarnessRunConfig`/`runHarness.ts` have no channel for an agent to report which
+     model powered a run. Partial mitigation: `LlmSolvingAgent`'s default `Agent.name` embeds the
+     exact provider/model. Fixing this properly means adding optional `modelName`/`modelVersion`
+     fields to `HarnessRunConfig` and setting them in `executeRun()` from the agent's own identity
+     — a small, additive `runHarness.ts` change, not yet made (outside the Phase 6 remainder's
+     approved file scope). Pick this up before treating comparison-run results as fully
+     reproducible metadata.
    - `EccContextProvider`/`AblatedEccContextProvider` currently have no real `tokenCount` from
      ECC's CLI contract, so both use Phase 5's `estimateTokenCount()` fallback on the serialized
      package — revisit if ECC's documented output ever adds one.
@@ -19,10 +36,10 @@
    Phase 7 row, alongside repeated-run/category/complexity analysis) — not requested this round's
    exit criterion; add once there is real failure data (from an actual comparison run) to analyze,
    e.g. which `verificationMethod` most often fails, clustered by category/complexity/condition.
-2b. **Phase 8 orchestration (not yet done, not phase-blocking):** nothing yet automatically runs
-   all 7 `AblatedEccContextProvider` component conditions against the benchmark end-to-end — that
-   is an experiment-orchestration concern bundled with item 2's "actual comparison run," not part
-   of Phase 8's exit criterion (the ablation mechanism and measurement).
+2b. **Phase 8 orchestration — now implemented:** `src/experiments/experimentConditions.ts` builds
+   all 7 `AblatedEccContextProvider` component conditions (plus native and full ECC) and
+   `runComparisonExperiment.ts` runs every one against the benchmark end-to-end. As with item 2,
+   the mechanism is built and tested but has not yet been executed against a live LLM backend.
 3. **Fixture backlog (not phase-blocking, pick up incrementally):** 27 of the 30 tasks still use
    the `"unpinned"` sentinel — only `debugging-01`, `feature-01`, `refactoring-01` have real
    fixture source code, a real `commitSha`, and real verification coverage. Author the rest the
@@ -65,4 +82,17 @@
    flag and EEP cannot fork/patch ECC (ADR-001). If ECC's documented contract ever adds a
    per-component flag, prefer wiring that directly over content-level ablation.
 
-Do not start further Phase 8/9 implementation before approval is given (master prompt §40).
+9. **LLM backend convention note (ADR-013):** `src/harness/llm/createLlmClient.ts` never picks a
+   default provider — `src/experiments/llmProviderConfigFromEnv.ts` always resolves
+   `EEP_LLM_PROVIDER` (`"anthropic"` or `"openai-compatible"`), `EEP_LLM_MODEL`, and
+   `EEP_LLM_API_KEY`/`EEP_LLM_BASE_URL` as applicable from the environment, throwing
+   `MissingLlmConfigError` rather than silently falling back. To add a fifth backend that isn't
+   Anthropic-native or OpenAI-compatible-shaped, add a third `LlmClient` implementation rather than
+   overloading either existing adapter. To run the real comparison against a local model, set
+   `EEP_LLM_PROVIDER=openai-compatible` and `EEP_LLM_BASE_URL` to that local server's URL (e.g.
+   Ollama's `http://localhost:11434/v1`) — no `EEP_LLM_API_KEY` needed. See
+   `agentBudgetConfigFromEnv()` for the agent's own turn/token/wall-clock budget env vars
+   (`EEP_AGENT_MAX_TURNS`, `EEP_LLM_MAX_TOKENS`, `EEP_AGENT_WALL_CLOCK_BUDGET_MS`).
+
+Do not start further Phase 7/8/9 implementation, and do not execute a live comparison run, before
+approval is given (master prompt §40).

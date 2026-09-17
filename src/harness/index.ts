@@ -1,4 +1,8 @@
+export * from './agents/llmAgentTools.js';
+export * from './agents/llmSolvingAgent.js';
 export * from './agents/nativeAgent.js';
+export * from './agents/promptBuilder.js';
+export * from './llm/index.js';
 export * from './providers/ablatedEccContextProvider.js';
 export * from './providers/eccAblation.js';
 export * from './providers/eccCliInvoker.js';
@@ -7,4 +11,5 @@ export * from './providers/eccPackageFetcher.js';
 export * from './providers/eccPackageSchema.js';
 export * from './providers/nativeContextProvider.js';
 export * from './runHarness.js';
+export * from './support/runNpmTest.js';
 export * from './workspace.js';

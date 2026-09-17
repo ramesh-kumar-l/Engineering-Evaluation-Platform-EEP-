@@ -12,7 +12,9 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "experiment:run": "npm run build && node dist/experiments/runComparisonExperiment.js",
+    "experiment:analyze": "npm run build && node dist/experiments/analyzeComparisonResults.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",

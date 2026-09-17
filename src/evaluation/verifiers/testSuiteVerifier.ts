@@ -1,10 +1,10 @@
-import { spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { generateId } from '../../domain/common/idGenerator.js';
 import { isoTimestampSchema } from '../../domain/common/timestamps.js';
 import { evidenceSchema } from '../../domain/evidence/evidence.schema.js';
 import { verificationSchema } from '../../domain/verification/verification.schema.js';
+import { runNpmTest } from '../../harness/support/runNpmTest.js';
 import {
   VerificationExecutionError,
   VerificationTimeoutError,
@@ -14,41 +14,6 @@ import {
 } from './verifier.types.js';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
-
-interface SpawnOutcome {
-  readonly exitCode: number | null;
-  readonly output: string;
-  readonly timedOut: boolean;
-}
-
-function runNpmTest(cwd: string, timeoutMs: number): Promise<SpawnOutcome> {
-  return new Promise((resolvePromise, reject) => {
-    // Fixed, hardcoded command (no task/agent-controlled input reaches this string), so
-    // shell:true is safe here; passing it as a single string with no `args` avoids Node's
-    // DEP0190 warning, which only applies when `args` are concatenated into a shell command.
-    const child = spawn('npm test', [], { cwd, shell: true, windowsHide: true });
-    let output = '';
-    let timedOut = false;
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill();
-    }, timeoutMs);
-
-    child.stdout?.on('data', (chunk: Buffer) => (output += chunk.toString()));
-    child.stderr?.on('data', (chunk: Buffer) => (output += chunk.toString()));
-
-    child.on('error', (error) => {
-      clearTimeout(timer);
-      reject(new VerificationExecutionError('Failed to spawn npm test', error));
-    });
-
-    child.on('close', (exitCode) => {
-      clearTimeout(timer);
-      resolvePromise({ exitCode, output, timedOut });
-    });
-  });
-}
 
 /**
  * Runs the fixture's own `npm test` inside the isolated workspace and reports pass/fail — see
@@ -89,10 +54,13 @@ export const testSuiteVerifier: Verifier = {
       );
     }
 
-    const { exitCode, output, timedOut } = await runNpmTest(
-      context.workspacePath,
-      DEFAULT_TIMEOUT_MS,
-    );
+    let spawnOutcome;
+    try {
+      spawnOutcome = await runNpmTest(context.workspacePath, DEFAULT_TIMEOUT_MS);
+    } catch (error) {
+      throw new VerificationExecutionError('Failed to spawn npm test', error);
+    }
+    const { exitCode, output, timedOut } = spawnOutcome;
 
     if (timedOut) {
       throw new VerificationTimeoutError(

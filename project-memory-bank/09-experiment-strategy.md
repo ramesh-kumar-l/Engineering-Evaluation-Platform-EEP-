@@ -1,18 +1,33 @@
 # 09 — Experiment Strategy
 
-Status: design target for Phase 3 (Experiment Harness) and Phase 6 (ECC Integration). As of
-Phase 3, Condition A's building blocks have a first working implementation:
+Status: design target for Phase 3 (Experiment Harness) and Phase 6 (ECC Integration), both now
+fully realized. As of Phase 3, Condition A's building blocks have a first working implementation:
 `src/harness/agents/nativeAgent.ts` (`NativeAgent`, deterministic repository exploration, no
-code generation) and `src/harness/providers/nativeContextProvider.ts`
-(`NativeContextProvider`, task text + file listing, no curation). As of Phase 6, Condition B/C's
-context source also has a real implementation: `src/harness/providers/eccContextProvider.ts`
-(`EccContextProvider`, wraps ECC's real CLI contract — see [[phases/phase-06]] and ADR-010 in
-[[14-decisions]]). A real solving agent to pair with it, and an actual comparison run, remain
-open next actions (see [[20-next-actions]]).
+code generation — kept only for its own harness-plumbing tests, see below) and
+`src/harness/providers/nativeContextProvider.ts` (`NativeContextProvider`, task text + file
+listing, no curation). As of Phase 6, Condition B/C's context source has a real implementation:
+`src/harness/providers/eccContextProvider.ts` (`EccContextProvider`, wraps ECC's real CLI
+contract — see [[phases/phase-06]] and ADR-010 in [[14-decisions]]). As of the Phase 6 remainder,
+a real solving agent also exists: `src/harness/agents/llmSolvingAgent.ts` (`LlmSolvingAgent`,
+LLM-backed, multi-provider — Claude, ChatGPT, Gemini, or a local model, per ADR-013) — and
+`src/experiments/runComparisonExperiment.ts` wires it together with every condition's
+`ContextProvider` for an actual comparison run against the 3 real-fixture tasks.
+
+**Which agent plays "the agent" in the real comparison run:** `LlmSolvingAgent`, not
+`NativeAgent`, and the *same* `LlmSolvingAgent` instance runs under every condition — including
+the native baseline (paired with `NativeContextProvider`). This corrects an earlier, literal
+reading of [[20-next-actions]] that would have kept `NativeAgent` (which performs no code
+generation and always reports `INCOMPLETE`) as the baseline while only the ECC condition got a
+real agent — see ADR-013 for the full reasoning. That design would have conflated "having a real
+agent" with "having ECC context" into one variable, violating the causal-isolation principle
+below. `NativeAgent` itself is unmodified and still used only in its own tests, proving the
+harness plumbing cheaply without needing a live LLM call.
 
 ## Initial experiment conditions
 
-**A — Native Agent**: Agent → native repository exploration → solution. Baseline.
+**A — Native Agent**: Agent → native repository exploration → solution. Baseline. In the real
+comparison run this is `LlmSolvingAgent` paired with `NativeContextProvider` — the same agent used
+in every other condition, so the comparison isolates context quality, not agent capability.
 
 **B — ECC + Agent**: ECC → context → agent → solution. Primary treatment.
 

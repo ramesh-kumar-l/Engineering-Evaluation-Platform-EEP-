@@ -37,7 +37,7 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | Interface | Status |
 |---|---|
 | `ContextProvider` (now carries `runId` on its request — Phase 3) | Interface defined; native implementation Phase 3, ECC-backed implementation Phase 6 — both Done |
-| `Agent` (now carries `runId` on its request — Phase 3) | Interface defined; first implementation (`NativeAgent`) in `src/harness/` (Phase 3); a real solving agent is later work |
+| `Agent` (now carries `runId` on its request — Phase 3) | Interface defined; `NativeAgent` (Phase 3, harness-plumbing only) and `LlmSolvingAgent` (Phase 6 remainder, real LLM-backed solving agent) both Done |
 
 ## src/benchmark/ (Phase 2)
 
@@ -46,12 +46,13 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `loadTasks.ts` (read + validate `benchmark/tasks/*.json` against `taskSchema`) | Done |
 | `index.ts` (barrel) | Done |
 
-## src/harness/ (Phase 3, extended Phase 4/5/6)
+## src/harness/ (Phase 3, extended Phase 4/5/6/6-remainder)
 
 | Module | Status |
 |---|---|
 | `workspace.ts` (`createIsolatedWorkspace` — filesystem-copy sandbox, ADR-007) | Done |
 | `support/listFiles.ts` (shared recursive file listing, capped) | Done |
+| `support/runNpmTest.ts` (`runNpmTest` — shared `npm test` spawn logic, extracted from `testSuiteVerifier.ts`) | Done (Phase 6 remainder) |
 | `providers/nativeContextProvider.ts` (`NativeContextProvider`) | Done |
 | `providers/eccPackageSchema.ts` (independent Zod mirror of ECC's `EngineeringContextPackage` contract, ADR-010) | Done (Phase 6) |
 | `providers/eccCliInvoker.ts` (`ProcessEccCliInvoker` — configurable subprocess wrapper around ECC's `ecc context` CLI, ADR-010) | Done (Phase 6) |
@@ -59,8 +60,26 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `providers/eccPackageFetcher.ts` (`fetchValidatedEccPackage` — shared invoke+parse+validate, extracted Phase 8) | Done (Phase 8) |
 | `providers/eccAblation.ts` (`ablatePackage` — per-component content-level ablation, ADR-012) | Done (Phase 8) |
 | `providers/ablatedEccContextProvider.ts` (`AblatedEccContextProvider implements ContextProvider` — one ablation Condition per ECC component) | Done (Phase 8) |
-| `agents/nativeAgent.ts` (`NativeAgent`) | Done |
-| `runHarness.ts` (`executeRun` — Task+Condition+Agent+ContextProvider → Run+Trace; carries an optional `onBeforeCleanup` hook (Phase 4) and now also returns the full `contextArtifact` on `HarnessRunOutcome` (Phase 5, ADR-009)) | Done |
+| `agents/nativeAgent.ts` (`NativeAgent` — harness-plumbing baseline only, not used in the real comparison run) | Done |
+| `llm/llmClient.types.ts` (`LlmClient`/`LlmMessage`/`LlmToolCall` — neutral, vendor-independent shape, ADR-013) | Done (Phase 6 remainder) |
+| `llm/anthropicLlmClient.ts` (`AnthropicLlmClient` — covers Claude) | Done (Phase 6 remainder) |
+| `llm/openAiCompatibleLlmClient.ts` (`OpenAiCompatibleLlmClient` — covers ChatGPT, Gemini, local models) | Done (Phase 6 remainder) |
+| `llm/createLlmClient.ts` (factory over an explicit `LlmProviderConfig`, no hardcoded default) | Done (Phase 6 remainder) |
+| `agents/llmAgentTools.ts` (`list_files`/`read_file`/`write_file`/`run_tests` — path-clamped, no shell-exec) | Done (Phase 6 remainder) |
+| `agents/promptBuilder.ts` (system prompt + initial user message from `Task`/`ContextArtifact`) | Done (Phase 6 remainder) |
+| `agents/llmSolvingAgent.ts` (`LlmSolvingAgent implements Agent` — the real, multi-provider solving agent, ADR-013) | Done (Phase 6 remainder) |
+| `runHarness.ts` (`executeRun` — Task+Condition+Agent+ContextProvider → Run+Trace; carries an optional `onBeforeCleanup` hook (Phase 4) and now also returns the full `contextArtifact` on `HarnessRunOutcome` (Phase 5, ADR-009)) | Done — `Run.metadata.modelName`/`modelVersion` still not wired through, see [[20-next-actions]] |
+| `index.ts` (barrel) | Done |
+
+## src/experiments/ (Phase 6 remainder)
+
+| Module | Status |
+|---|---|
+| `experimentConditions.ts` (`buildExperimentConditions` — the 9 real conditions: native + full ECC + 7 ablations) | Done |
+| `llmProviderConfigFromEnv.ts` (`llmProviderConfigFromEnv`/`agentBudgetConfigFromEnv` — env-var-driven, no hardcoded default provider) | Done |
+| `resultsWriter.ts` (`writeRunResult`/`readAllRunResults` — raw JSON dump to gitignored `experiment-results/`, not Phase 9's canonical format) | Done |
+| `runComparisonExperiment.ts` (main loop: 3 real-fixture tasks × 9 conditions × 3 repetitions; runnable via `npm run experiment:run`) | Done — mechanism only; no live run executed yet |
+| `analyzeComparisonResults.ts` (reads dumped bundles back, drives Phase 7/8's analysis unchanged; runnable via `npm run experiment:analyze`) | Done — proven against synthetic bundles in tests; not yet run against live data |
 | `index.ts` (barrel) | Done |
 
 ## src/evaluation/ (Phase 4)
@@ -68,7 +87,7 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | Module | Status |
 |---|---|
 | `verifiers/verifier.types.ts` (`Verifier` contract, `VerificationExecutionError`/`VerificationTimeoutError`) | Done |
-| `verifiers/testSuiteVerifier.ts` (spawns fixture's real `npm test`) | Done |
+| `verifiers/testSuiteVerifier.ts` (spawns fixture's real `npm test`, now via shared `harness/support/runNpmTest.ts`) | Done |
 | `verifiers/diffAnalysisVerifier.ts` (generic pristine-vs-workspace change detection) | Done |
 | `verifiers/index.ts` (`ALL_VERIFIERS` registry + barrel) | Done |
 | `runVerifiers.ts` (runs every applicable verifier, collects results + execution errors) | Done |
@@ -120,17 +139,21 @@ Update this whenever a major feature/module is finished, not only at phase bound
 
 Fixture repositories + real commit pins for 27 of 30 tasks (incremental backlog), verifiers for
 7 of the 9 `verificationMethod` enum values (add as needed), 8 of 22 named metrics with no data
-source yet (ADR-009), a real solving agent for Condition B/C, an actual multi-condition
-comparison run (Native vs. ECC-backed, and each ECC-ablated-component condition) against the
-benchmark (needed before `analyzeRepeatedRuns()`/`analyzeComponentContributions()` have real data
-to run on), failure analysis (Phase 7 roadmap remainder), CLI, metric/artifact persistence to
-disk, container/process-level sandboxing (open risk, see [[16-risks]]), reporting/dashboard
-(Phase 9-10).
+source yet (ADR-009), **executing a live comparison run** (the mechanism — `LlmSolvingAgent` +
+`src/experiments/` — is Done, but no one has run it against a real LLM backend yet; needs the
+user's own credentials and a deliberate `npm run experiment:run`), `Run.metadata.modelName`/
+`modelVersion` population (small additive `runHarness.ts` change, see [[20-next-actions]]),
+failure analysis (Phase 7 roadmap remainder), a general-purpose CLI, Phase 9's canonical
+Report/persistence format (`experiment-results/` is a plain JSON dump, not that), container/
+process-level sandboxing (open risk, see [[16-risks]]), reporting/dashboard (Phase 9-10).
 
 ## Verification snapshot
 
-Last run: `npm run build && npm test && npm run lint` — clean build, 205/205 tests passing across
-53 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
+Last run: `npm run build && npm test && npm run lint` — clean build, 258/258 tests passing across
+64 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
 that checkout is absent), zero lint errors. Confirmed no test files leak into `dist/` after
-`rm -rf dist && npm run build`.
+`rm -rf dist && npm run build`; the two new CLI entry points
+(`dist/experiments/runComparisonExperiment.js`, `dist/experiments/analyzeComparisonResults.js`)
+compiled correctly. Largest new/edited file (Phase 6 remainder) is `anthropicLlmClient.ts` at 143
+lines, comfortably under the 300-line ceiling.
 Re-run this before trusting this ledger; it is a snapshot, not a live status.

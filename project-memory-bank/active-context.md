@@ -5,9 +5,30 @@ source code, if picking this project back up after a break.
 
 ## Where things stand right now
 
-Phase 0 (Foundation) through Phase 7 (Experimental Analysis, confidence-intervals-and-effect-size
-scope) are complete. Phase 8 (Ablation) is now also implemented and verified, scoped to this
-round's exact exit criterion: per-component measurement of ECC's contribution.
+Phase 0 (Foundation) through Phase 8 (Ablation) are complete, and Phase 6's full roadmap scope
+(real solving agent + actual comparison-run mechanism) is now also closed — see below. Phase 7 is
+complete in its confidence-intervals-and-effect-size scope. Phase 8 (Ablation) is implemented and
+verified, scoped to per-component measurement of ECC's contribution.
+
+**Phase 6 remainder (this session):** `src/harness/llm/` gives EEP a real, multi-provider LLM
+client layer (ADR-013 in [[14-decisions]]) — `AnthropicLlmClient` (Claude) and
+`OpenAiCompatibleLlmClient` (one implementation covering ChatGPT, Gemini's OpenAI-compatibility
+endpoint, and any local OpenAI-compatible server, by configuration alone), assembled via
+`createLlmClient(config)` with no hardcoded default vendor. `LlmSolvingAgent`
+(`src/harness/agents/llmSolvingAgent.ts`) is the real solving agent: a bounded tool loop
+(`list_files`/`read_file`/`write_file`, all path-clamped to the workspace root, plus `run_tests` —
+no generic shell-exec) that pairs with *any* `ContextProvider`. Critically, it runs under **every**
+condition in the real comparison, including the native baseline — not just the ECC condition —
+correcting an earlier design note that would have kept the old, always-`INCOMPLETE`, never-edits-
+code `NativeAgent` as the baseline while only ECC got a real agent (a variable-conflation bug
+matching the "Baseline weakness" risk, now Mitigated in [[16-risks]]). `src/experiments/`
+(`runComparisonExperiment.ts` + `analyzeComparisonResults.ts`) runs the actual 9-condition × 3-task
+× 3-repetition comparison through `executeEvaluatedRun()`/`computeRunMetrics()`, dumps raw JSON per
+run to a gitignored `experiment-results/`, and feeds the results into Phase 7's
+`analyzeRepeatedRuns()` and Phase 8's `analyzeComponentContributions()` unchanged — the first time
+either function's wiring has been exercised end-to-end (against synthetic bundles in tests; a
+*live* LLM-backed run has not yet been executed — that needs the user's own credentials and a
+deliberate `npm run experiment:run`). Full detail in [[phases/phase-06]] and ADR-013.
 `src/harness/providers/eccAblation.ts`'s `ablatePackage()` maps each of the 7 named components
 from [[06-evaluation-methodology]] §Ablation discipline (history, memory, ranking, provenance,
 risk, budgeting, verification) onto a real, already-present field of ECC's documented package
@@ -43,12 +64,15 @@ deliberately unimplemented (ADR-009). Full detail in [[phases/phase-05]].
 
 ## What is NOT done
 
-No real solving agent yet — `NativeContextProvider`/`NativeAgent` (no context) and
-`EccContextProvider` (real curated context) both exist, but nothing plays Condition B/C's "does
-real work" agent role yet, so no actual native-vs-ECC comparison run has happened, which also
-means `analyzeRepeatedRuns()` and the new `analyzeComponentContributions()` have never yet run
-against real experiment data — only synthetic fixture data in their tests. 27 of 30 tasks have no
-fixture source code yet (tracked backlog, see [[20-next-actions]]). Only 2 of 9
+**No live comparison run has been executed yet.** `LlmSolvingAgent` and `src/experiments/` exist
+and are tested (mocked LLM responses; a synthetic-bundle wiring test for the analysis path), but
+nobody has run `npm run experiment:run` against a real Claude/ChatGPT/Gemini/local-model backend —
+that requires the user's own `EEP_LLM_*` credentials/server and a deliberate invocation, not
+something done automatically. Until that happens, `analyzeRepeatedRuns()` and
+`analyzeComponentContributions()` still have never run against *real* experiment data, only
+synthetic data in tests. `Run.metadata.modelName`/`modelVersion` are also still unpopulated (see
+[[20-next-actions]] item 2's note) — a small additive `runHarness.ts` change, not yet made. 27 of
+30 tasks have no fixture source code yet (tracked backlog, see [[20-next-actions]]). Only 2 of 9
 `verificationMethod` enum values have a real verifier (`test-suite`, `diff-analysis`). 8 of 22
 named metrics have no real data source yet (ADR-009) — though ECC's per-item
 relevance/trustLevel/authority/freshness data is now available inside `ContextArtifact.content` as
@@ -56,22 +80,23 @@ a future (not yet wired) source for 4 of those 8. Failure analysis (the 4th item
 [[13-roadmap]]'s Phase 7 row) was not requested and is not built. ECC's ablation is content-level
 (post-hoc field removal from its CLI output), not a measurement of ECC's real internal component
 architecture — see ADR-012's trade-offs and [[phases/phase-08]]'s known limitations. No
-metric/artifact/analysis persistence to disk (everything Phases 3-8 produce is computed in-memory
-and returned to the caller — there is no CLI or storage layer yet). No container/process-level
-sandboxing (isolation is filesystem-copy only; `testSuiteVerifier` spawns real child processes
-with only a wall-clock timeout — see the open risk in [[16-risks]]). Do not assume any of these
-exist without checking `implementation-status.md` first.
+metric/artifact/analysis persistence to disk beyond the Phase 6-remainder's plain gitignored
+`experiment-results/` JSON dump (everything else Phases 3-8 produce is computed in-memory and
+returned to the caller — there is no CLI or storage layer yet, and `experiment-results/` is
+explicitly not Phase 9's canonical format). No container/process-level sandboxing (isolation is
+filesystem-copy only; `testSuiteVerifier` and the solving agent's `run_tests` tool both spawn real
+child processes with only a wall-clock timeout — narrowed but not closed, see [[16-risks]]). Do not
+assume any of these exist without checking `implementation-status.md` first.
 
 ## Immediate next step
 
-Per the master prompt's strict phase gate, Phase 8 (this round's scope) completion was reported to
-the user and no further Phase 8/9 work has started. Do not begin further work without an explicit
-new approval message from the user, even if this file is being read in a fresh session — see
-[[20-next-actions]] and [[00-project-charter]] §Working protocol. The next open items are: a real
-solving agent for Condition B/C and an actual multi-condition comparison run (still open from
-Phase 6, and a prerequisite for `analyzeRepeatedRuns()`/`analyzeComponentContributions()` to
-analyze real data instead of synthetic fixtures), failure analysis (Phase 7's roadmap remainder),
-or Phase 9 (Reporting).
+Per the master prompt's strict phase gate, this Phase 6-remainder work's completion is reported to
+the user and no further Phase 7/8/9 work or live run has started. Do not begin further work,
+and do not execute a live comparison run, without an explicit new approval message from the user,
+even if this file is being read in a fresh session — see [[20-next-actions]] and
+[[00-project-charter]] §Working protocol. The next open items are: executing a live comparison run
+(needs the user's own LLM credentials and an explicit go-ahead), failure analysis (Phase 7's
+roadmap remainder), or Phase 9 (Reporting).
 
 ## Process reminders for whoever (human or agent) picks this up
 
@@ -120,3 +145,14 @@ or Phase 9 (Reporting).
   `analyzeComponentContributions()` need no changes to support a new component. Never add new
   statistics for ablation measurement — it reuses `analyzeRepeatedRuns()` (Phase 7) because an
   ablation comparison is structurally just another condition-vs-baseline comparison.
+- LLM solving-agent convention (ADR-013): `LlmSolvingAgent` must run under *every* condition in
+  the real comparison, including the native baseline — never let `NativeAgent` stand in as "the
+  baseline agent" in a real comparison run, since that would conflate agent capability with
+  context quality (the one thing [[09-experiment-strategy]] says must be the only varying
+  dimension). To add a 5th LLM backend, add a new `src/harness/llm/*LlmClient.ts` implementing the
+  shared `LlmClient` interface — never hardcode a default provider in `createLlmClient.ts`; new
+  provider config always comes from an explicit `LlmProviderConfig` value. The agent's tool
+  surface (`llmAgentTools.ts`) stays deliberately narrow — never add a generic shell-exec tool;
+  every new filesystem tool must resolve its path argument through `resolveWorkspacePath()` (or
+  equivalent) and reject anything that escapes the workspace root, since tool-call arguments come
+  from model output and are untrusted input.

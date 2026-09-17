@@ -455,3 +455,112 @@ Format: Decision / Context / Options / Chosen approach / Reason / Trade-offs / C
   experiment data, for the same reason `analyzeRepeatedRuns()` hasn't (Phase 6's remaining scope
   is still open) — validated against synthetic fixtures in tests.
 - **Status:** Accepted.
+
+## ADR-013: Multi-provider LLM solving agent (two wire adapters for four backends); the same agent runs under every condition, including the native baseline
+
+- **Context:** Phase 6's remaining roadmap scope — a real solving agent for Condition B/C, and an
+  actual native-vs-ECC (and per-ablation-component) comparison run — was still open after ADR-010
+  ([[phases/phase-06]]). The user explicitly required support for **both a local LLM and
+  pluggable cloud backends** (Claude, Gemini, ChatGPT), not a single hardcoded vendor. Building
+  this also required resolving a latent design flaw in [[20-next-actions]] item 2's literal
+  wording ("replacing `NativeAgent` as the 'does real work' condition — `NativeAgent` remains the
+  native/no-context baseline"): taken literally, this would compare a real LLM agent (ECC
+  condition) against a deterministic, always-`INCOMPLETE`, never-edits-code agent (native
+  baseline) — conflating "having a real agent" with "having ECC context" as one variable, directly
+  contradicting [[09-experiment-strategy]]'s explicit causal-isolation principle ("All conditions
+  share task, repository state, model, tools, environment, evaluator version. The only varying
+  dimension is the `ContextProvider`") and matching the already-open "Baseline weakness" risk in
+  [[16-risks]].
+- **Options considered (backend coverage):** (a) one bespoke client per vendor (4 implementations:
+  Anthropic, OpenAI, Google, and a generic local-server client); (b) exactly two wire adapters
+  against an EEP-owned generic `LlmClient` interface — one Anthropic-native, one OpenAI-compatible
+  — since ChatGPT, Gemini (via Google's own OpenAI-compatibility endpoint), and most local model
+  servers (Ollama, LM Studio) all speak the same OpenAI-style `/chat/completions` +
+  function-calling wire format.
+- **Chosen approach (backend coverage):** (b). `src/harness/llm/`: `llmClient.types.ts` (the
+  neutral `LlmClient`/`LlmMessage`/`LlmToolCall` shape — never a vendor SDK type leaking upward),
+  `anthropicLlmClient.ts` (`AnthropicLlmClient`, covers Claude), `openAiCompatibleLlmClient.ts`
+  (`OpenAiCompatibleLlmClient`, covers ChatGPT at `api.openai.com/v1`, Gemini at Google's
+  OpenAI-compatibility endpoint, and any local OpenAI-compatible server via `baseUrl`), and
+  `createLlmClient.ts` (`createLlmClient(config)` factory over an explicit `LlmProviderConfig`
+  union — no provider is hardcoded as a default, mirroring ADR-010's "never hardcode, always
+  configurable" convention). Both clients use Node ≥20's global `fetch`; no new npm dependency.
+- **Reason:** Four bespoke clients would triple the new surface area for no real benefit, since
+  three of the four target backends already converge on one wire format. `createLlmClient`'s
+  config is always resolved from explicit environment variables
+  (`src/experiments/llmProviderConfigFromEnv.ts`: `EEP_LLM_PROVIDER`/`EEP_LLM_MODEL`/
+  `EEP_LLM_BASE_URL`/`EEP_LLM_API_KEY`), never a built-in fallback vendor — satisfies
+  [[11-security]]'s "no source code leaves the local machine unless the user explicitly configures
+  that": running against any cloud vendor is always an explicit opt-in, while the local-LLM path
+  (`EEP_LLM_PROVIDER=openai-compatible` + a `localhost` `EEP_LLM_BASE_URL`) sends nothing off the
+  machine.
+- **Trade-offs (backend coverage):** Reusing each vendor's own OpenAI-compatibility shim for 3 of
+  4 backends inherits any gaps in that vendor's compatibility layer (e.g. partial tool-calling
+  support on some local models) rather than using that vendor's native wire format — a documented
+  limitation, not silently assumed away (ADR-009 discipline).
+- **Options considered (which agent runs which condition):** (a) follow [[20-next-actions]]'s
+  literal wording — a new real agent only for the ECC condition, `NativeAgent` stays the baseline;
+  (b) the new `LlmSolvingAgent` runs under *every* condition in the real comparison, including
+  native — only the `ContextProvider` varies.
+- **Chosen approach:** (b). `NativeAgent` (`src/harness/agents/nativeAgent.ts`) is left completely
+  unmodified — it still proves the harness plumbing cheaply in its own tests — but is excluded
+  from the real comparison run (`src/experiments/runComparisonExperiment.ts`); `LlmSolvingAgent`
+  is the one agent used across all 9 conditions there (native + full ECC + 7 per-component
+  ablations, from `src/experiments/experimentConditions.ts`).
+- **Reason:** This is the only design that isolates context quality as the sole independent
+  variable, per [[09-experiment-strategy]] — otherwise a measured "ECC helps" effect could equally
+  be "having any real agent at all helps," an uncontrolled confound. This correction is called out
+  explicitly rather than silently applied; [[20-next-actions]] and [[09-experiment-strategy]] are
+  updated to match.
+- **Solving agent design:** `LlmSolvingAgent implements Agent`
+  (`src/harness/agents/llmSolvingAgent.ts`) runs a bounded tool loop: build an initial prompt from
+  `Task` + optional `ContextArtifact.content` (`promptBuilder.ts`), then alternate model turn →
+  tool execution → feed result back, until the model calls no further tools (agent-reported
+  `SUCCESS`), a turn budget is exhausted (`INCOMPLETE`), a wall-clock budget is exhausted
+  (`TIMEOUT`), or the LLM client errors unrecoverably (caught and returned as `AGENT_FAILURE`,
+  never thrown — so a real `Decision` records why, instead of being lost to `runHarness.ts`'s
+  blanket catch-all-to-`AGENT_FAILURE`). Per ADR-008, none of this self-report is authoritative —
+  `determineOutcomeStatus()` and the real verifiers still decide `Outcome.status` independently,
+  unchanged. The tool surface (`llmAgentTools.ts`) is deliberately narrow — `list_files`,
+  `read_file`, `write_file` (every path resolved against the workspace root and rejected if it
+  escapes it, since tool-call arguments come from model output and are untrusted input) and
+  `run_tests` (always the fixture's own fixed `npm test`, never an arbitrary model-supplied
+  command) — no generic shell-exec tool is exposed at all, directly addressing the "revisit before
+  any agent executes untrusted generated commands" note on the environment-isolation risk in
+  [[16-risks]]. `testSuiteVerifier.ts`'s `runNpmTest`/`SpawnOutcome` spawn logic was extracted
+  unchanged into a shared `src/harness/support/runNpmTest.ts` (same extract-don't-duplicate
+  pattern ADR-012 used for `fetchValidatedEccPackage`), reused by both the verifier and the
+  `run_tests` tool; the verifier's own tests pass unmodified.
+- **Experiment orchestration:** `src/experiments/` (`experimentConditions.ts`,
+  `llmProviderConfigFromEnv.ts`, `resultsWriter.ts`, `runComparisonExperiment.ts`,
+  `analyzeComparisonResults.ts`) runs 3 real-fixture tasks (`debugging-01`, `feature-01`,
+  `refactoring-01` — the other 27 remain [[20-next-actions]]'s fixture backlog) × 9 conditions × 3
+  repetitions through `executeEvaluatedRun()` + `computeRunMetrics()`, and dumps each run's full
+  bundle as raw JSON to a new gitignored `experiment-results/<experimentId>/<runId>.json` — Phase
+  9's canonical `Report`/persistence format doesn't exist yet, so this is deliberately a plain data
+  dump with no long-term schema commitment, not a pre-emption of that phase.
+  `analyzeComparisonResults.ts` reads the dumped bundles back, reconstructs `RunAnalysisRecord[]`,
+  and calls Phase 7's `analyzeRepeatedRuns()` and Phase 8's `analyzeComponentContributions()`
+  completely unchanged — the first time either runs against real, not synthetic, data.
+- **Known limitation:** `Run.metadata.modelName`/`modelVersion` (required run metadata per
+  [[10-reproducibility]]) are still not populated — `HarnessRunConfig`/`runHarness.ts` have no
+  channel for an agent to report which model powered a run, and extending them is outside this
+  round's approved file scope. As a partial mitigation, `LlmClient` now exposes `model` publicly,
+  and `LlmSolvingAgent`'s default `Agent.name` is `llm-solving-agent:<providerLabel>:<model>` (e.g.
+  `llm-solving-agent:anthropic:claude-sonnet-5`), so `Run.metadata.agentName` at least
+  distinguishes runs by exact backend/model even though the dedicated fields stay empty. Flagged
+  as a next action for whoever next touches `runHarness.ts`.
+- **Trade-offs:** Actually **executing** a live comparison run against a paid cloud API or a local
+  model is not part of this round's automatic implementation — the mechanism is built and tested
+  with mocked LLM responses (`vi.stubGlobal('fetch', ...)` — no real network calls or API cost in
+  CI) plus a synthetic-bundle wiring test for the analysis path; running it for real requires the
+  user's own API key or local server, triggered via `npm run experiment:run` /
+  `npm run experiment:analyze`.
+- **Consequences:** New files (all under 300 lines; largest is `anthropicLlmClient.ts` at 143):
+  `src/harness/llm/*` (5 files), `src/harness/agents/llmAgentTools.ts`,
+  `src/harness/agents/promptBuilder.ts`, `src/harness/agents/llmSolvingAgent.ts`,
+  `src/harness/support/runNpmTest.ts`, `src/experiments/*` (6 files including a barrel). Edited:
+  `src/evaluation/verifiers/testSuiteVerifier.ts` (uses the extracted `runNpmTest`, no behavior
+  change), `src/harness/index.ts` (barrel additions), `package.json` (`experiment:run`/
+  `experiment:analyze` scripts), `.gitignore` (`experiment-results/`). No existing schema changed.
+- **Status:** Accepted.
