@@ -113,7 +113,75 @@ Notes were left unchanged since ADR-009's citation of it still applies, extended
 
 ## Status
 
-Complete (this round's scope: confidence intervals and effect size across categories/complexity),
-pending user approval to proceed with the rest of Phase 7's roadmap scope (failure analysis) once
-real experiment data exists, the rest of Phase 6 (real solving agent, actual comparison run), or
-to move to Phase 8.
+Complete (this round's scope: confidence intervals and effect size across categories/complexity).
+See "Phase 7 remainder" below for the failure-analysis item, closed in a later session.
+
+## Phase 7 remainder — failure clustering (later session)
+
+### Objective
+
+The fourth item this phase's roadmap row always included but the original round didn't request:
+which `verificationMethod`s fail most often, clustered by condition/category/complexity — see
+[[13-roadmap]]'s Phase 7 row and [[20-next-actions]] item 2a.
+
+### Implemented
+
+Two new files in `src/analysis/` (both comfortably under 300 lines):
+
+- **`failureAnalysisInput.ts`** (19 lines) — `RunVerificationRecord`, the structural input type
+  pairing one run's `Verification[]` with its condition name and task category/complexity. Mirrors
+  `analysisInput.ts`'s `RunAnalysisRecord` shape exactly, but for verifications instead of metrics
+  — same one-way-dependency discipline (no `harness`/`evaluation` import).
+- **`failureClustering.ts`** (158 lines) — `analyzeFailureClusters(records, {level})`, the entry
+  point. Flattens every run's verifications into `(method, passed, conditionName, taskCategory,
+  taskComplexity)` tuples, then groups by `verificationMethod` alone (`overall`), and by method ×
+  condition / × category / × complexity (`byCondition`/`byCategory`/`byComplexity`). Each cluster's
+  failure rate gets a Wilson confidence interval via the *same* `proportionConfidenceInterval()`
+  Phase 7 already built for `task-success` (ADR-011) — a verification pass/fail is exactly the
+  Bernoulli shape that interval is for, so no new statistics were invented. Every list is sorted
+  worst-failure-rate-first, so the highest-priority cluster to investigate is always first. No
+  `insufficient-data` branch is needed (unlike `summarizeGroup()`): clusters are only ever built
+  from method/dimension-value pairs already confirmed present in the data, so `totalAttempts` is
+  always ≥ 1 by construction, satisfying `proportionConfidenceInterval()`'s one requirement without
+  a defensive guard for a case that cannot occur.
+
+`src/experiments/analyzeComparisonResults.ts` now also builds `RunVerificationRecord[]` from the
+same dumped `RunResultBundle`s it already reads (each bundle already carries `verifications`) and
+calls `analyzeFailureClusters()`, adding `failureClusterReport` to `ComparisonAnalysisResult` and
+a new printed section — the same "prove the wiring against synthetic bundles" pattern the rest of
+this file already used for `analyzeRepeatedRuns()`/`analyzeComponentContributions()`.
+
+### Tests
+
+`failureClustering.test.ts` (8 tests): every observed method listed, correct overall/condition/
+category/complexity counts against a hand-traceable synthetic dataset, worst-first sort order, a
+Wilson interval attached to every cluster and bounded to [0,1], and an empty-input case returning
+empty arrays rather than throwing. `analyzeComparisonResults.test.ts` extended (not a new file) to
+assert `failureClusterReport` is correctly wired from dumped bundles' `verifications`.
+
+### Validation
+
+`npm run build && npm test && npm run lint` clean — 266/266 tests across 65 files, zero lint
+errors. `rm -rf dist && npm run build` confirmed no test-file leakage. Also ran `npx tsc --noEmit`
+directly against both new/edited test files (test files are excluded from the normal build/test
+type-check, per this project's existing convention — see [[phases/phase-06]]'s remainder section)
+to catch anything the normal pipeline wouldn't; clean, no errors.
+
+### Known limitations
+
+- Failure clustering has not yet run against real experiment data — like the rest of Phase 7/8,
+  it is proven correct against synthetic bundles in tests only, since no live comparison run has
+  been executed (see [[phases/phase-06]]/[[20-next-actions]]).
+- Clustering is purely descriptive (counts, rates, confidence intervals) — it does not attempt to
+  explain *why* a method fails or suggest a fix; that interpretation is left to a human reader or
+  a later reporting layer, per project-memory-bank/08-metrics.md §Anti-goal, the same discipline
+  `analyzeRepeatedRuns()` already follows.
+- No correction for multiple comparisons across the many (method × dimension-value) clusters
+  produced — same known limitation already flagged above for `analyzeRepeatedRuns()`, and for the
+  same reason left to Phase 9's reporting layer.
+
+### Status
+
+Complete. Phase 7 is now fully closed against [[13-roadmap]]'s entire Phase 7 row (repeated-run
+analysis, category/complexity breakdown, and failure clustering). Pending user approval to proceed
+with a live comparison run, Phase 9, or any other next step.

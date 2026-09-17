@@ -5,10 +5,26 @@ source code, if picking this project back up after a break.
 
 ## Where things stand right now
 
-Phase 0 (Foundation) through Phase 8 (Ablation) are complete, and Phase 6's full roadmap scope
-(real solving agent + actual comparison-run mechanism) is now also closed — see below. Phase 7 is
-complete in its confidence-intervals-and-effect-size scope. Phase 8 (Ablation) is implemented and
-verified, scoped to per-component measurement of ECC's contribution.
+Phase 0 (Foundation) through Phase 8 (Ablation) are complete. Phase 6's full roadmap scope (real
+solving agent + actual comparison-run mechanism) is closed — see below. Phase 7 is now complete
+against its *entire* roadmap row, including failure clustering (see below) — not just the
+confidence-intervals-and-effect-size scope from the round that first implemented it. Phase 8
+(Ablation) is implemented and verified, scoped to per-component measurement of ECC's contribution.
+
+**Phase 7 remainder (this session):** `src/analysis/failureClustering.ts`'s
+`analyzeFailureClusters()` is the 4th item [[13-roadmap]]'s Phase 7 row always included — which
+`verificationMethod`s fail most often, clustered overall and by condition/task category/
+complexity. It reuses the *same* Wilson-interval machinery (`proportionConfidenceInterval()`,
+ADR-011) Phase 7 already built for `task-success` rather than inventing new statistics: a
+verification pass/fail is exactly the Bernoulli shape that interval is for. Every returned list is
+sorted worst-failure-rate-first. `src/analysis/failureAnalysisInput.ts`'s `RunVerificationRecord`
+is the structural input type (mirrors `RunAnalysisRecord`, but for a run's `Verification[]`
+instead of its `Metric[]`). `src/experiments/analyzeComparisonResults.ts` now also builds
+`RunVerificationRecord[]` from the same dumped bundles it already reads and wires in
+`failureClusterReport`, printing a new section. Proven correct against synthetic verification data
+in tests (`failureClustering.test.ts`, 8 tests, plus an extension to
+`analyzeComparisonResults.test.ts`) — like the rest of Phase 7/8, not yet run against a live
+comparison's real data. Full detail in [[phases/phase-07]]'s remainder section.
 
 **Phase 6 remainder (this session):** `src/harness/llm/` gives EEP a real, multi-provider LLM
 client layer (ADR-013 in [[14-decisions]]) — `AnthropicLlmClient` (Claude) and
@@ -76,8 +92,7 @@ synthetic data in tests. `Run.metadata.modelName`/`modelVersion` are also still 
 `verificationMethod` enum values have a real verifier (`test-suite`, `diff-analysis`). 8 of 22
 named metrics have no real data source yet (ADR-009) — though ECC's per-item
 relevance/trustLevel/authority/freshness data is now available inside `ContextArtifact.content` as
-a future (not yet wired) source for 4 of those 8. Failure analysis (the 4th item in
-[[13-roadmap]]'s Phase 7 row) was not requested and is not built. ECC's ablation is content-level
+a future (not yet wired) source for 4 of those 8. ECC's ablation is content-level
 (post-hoc field removal from its CLI output), not a measurement of ECC's real internal component
 architecture — see ADR-012's trade-offs and [[phases/phase-08]]'s known limitations. No
 metric/artifact/analysis persistence to disk beyond the Phase 6-remainder's plain gitignored
@@ -90,13 +105,13 @@ assume any of these exist without checking `implementation-status.md` first.
 
 ## Immediate next step
 
-Per the master prompt's strict phase gate, this Phase 6-remainder work's completion is reported to
-the user and no further Phase 7/8/9 work or live run has started. Do not begin further work,
-and do not execute a live comparison run, without an explicit new approval message from the user,
-even if this file is being read in a fresh session — see [[20-next-actions]] and
-[[00-project-charter]] §Working protocol. The next open items are: executing a live comparison run
-(needs the user's own LLM credentials and an explicit go-ahead), failure analysis (Phase 7's
-roadmap remainder), or Phase 9 (Reporting).
+Per the master prompt's strict phase gate, this Phase 7-remainder work's completion is reported to
+the user and no further Phase 9 work or live run has started. Do not begin further work, and do
+not execute a live comparison run, without an explicit new approval message from the user, even if
+this file is being read in a fresh session — see [[20-next-actions]] and [[00-project-charter]]
+§Working protocol. Phases 6, 7, and 8 are now all fully complete against their roadmap scope; the
+next open items are: executing a live comparison run (needs the user's own LLM credentials and an
+explicit go-ahead), or Phase 9 (Reporting).
 
 ## Process reminders for whoever (human or agent) picks this up
 

@@ -238,5 +238,6 @@ cost, and model-version sensitivity) rather than hypothetical — notes updated 
 Complete: the real solving agent and the comparison-run mechanism are implemented and tested.
 **No live comparison run has been executed** — that requires the user's own LLM credentials
 and/or local server and a deliberate `npm run experiment:run` invocation, which is not something
-this implementation performs automatically. Pending user approval to proceed to Phase 7's
-remainder (failure analysis), Phase 8's orchestration follow-up, or Phase 9.
+this implementation performs automatically. Phase 7's remainder (failure analysis) and Phase 8's
+orchestration follow-up are both now also complete, see [[phases/phase-07]]. Pending user approval
+to proceed to Phase 9, or to execute a live comparison run.

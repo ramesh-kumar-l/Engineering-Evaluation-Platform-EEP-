@@ -2,6 +2,8 @@ export * from './analysisInput.js';
 export * from './componentContribution.js';
 export * from './confidenceInterval.js';
 export * from './effectSize.js';
+export * from './failureAnalysisInput.js';
+export * from './failureClustering.js';
 export * from './groupBy.js';
 export * from './groupedAnalysis.js';
 export * from './repeatedRunAnalysis.js';

@@ -79,7 +79,7 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `llmProviderConfigFromEnv.ts` (`llmProviderConfigFromEnv`/`agentBudgetConfigFromEnv` — env-var-driven, no hardcoded default provider) | Done |
 | `resultsWriter.ts` (`writeRunResult`/`readAllRunResults` — raw JSON dump to gitignored `experiment-results/`, not Phase 9's canonical format) | Done |
 | `runComparisonExperiment.ts` (main loop: 3 real-fixture tasks × 9 conditions × 3 repetitions; runnable via `npm run experiment:run`) | Done — mechanism only; no live run executed yet |
-| `analyzeComparisonResults.ts` (reads dumped bundles back, drives Phase 7/8's analysis unchanged; runnable via `npm run experiment:analyze`) | Done — proven against synthetic bundles in tests; not yet run against live data |
+| `analyzeComparisonResults.ts` (reads dumped bundles back, drives Phase 7 (repeated-run + failure clustering)/8's analysis unchanged; runnable via `npm run experiment:analyze`) | Done — proven against synthetic bundles in tests; not yet run against live data |
 | `index.ts` (barrel) | Done |
 
 ## src/evaluation/ (Phase 4)
@@ -124,7 +124,8 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `groupedAnalysis.ts` (`analyzeRepeatedRuns` — the Phase 7 entry point: overall + by-category + by-complexity) | Done |
 | `index.ts` (barrel) | Done |
 | `componentContribution.ts` (`analyzeComponentContributions` — Phase 8 entry point, reuses `analyzeRepeatedRuns` unchanged) | Done (Phase 8) |
-| Failure analysis (4th item in Phase 7's roadmap scope) | Not started — not requested this round, see [[phases/phase-07]] |
+| `failureAnalysisInput.ts` (`RunVerificationRecord` — structural input pairing a run's `Verification[]` with condition/category/complexity) | Done (Phase 7 remainder) |
+| `failureClustering.ts` (`analyzeFailureClusters` — 4th item in Phase 7's roadmap scope: `verificationMethod` failure-rate clustering overall/by condition/category/complexity, Wilson CI per cluster, worst-first sort) | Done (Phase 7 remainder) |
 
 ## benchmark/ (Phase 2, updated Phase 3)
 
@@ -143,17 +144,20 @@ source yet (ADR-009), **executing a live comparison run** (the mechanism — `Ll
 `src/experiments/` — is Done, but no one has run it against a real LLM backend yet; needs the
 user's own credentials and a deliberate `npm run experiment:run`), `Run.metadata.modelName`/
 `modelVersion` population (small additive `runHarness.ts` change, see [[20-next-actions]]),
-failure analysis (Phase 7 roadmap remainder), a general-purpose CLI, Phase 9's canonical
-Report/persistence format (`experiment-results/` is a plain JSON dump, not that), container/
-process-level sandboxing (open risk, see [[16-risks]]), reporting/dashboard (Phase 9-10).
+a general-purpose CLI, Phase 9's canonical Report/persistence format (`experiment-results/` is a
+plain JSON dump, not that), container/process-level sandboxing (open risk, see [[16-risks]]),
+reporting/dashboard (Phase 9-10).
 
 ## Verification snapshot
 
-Last run: `npm run build && npm test && npm run lint` — clean build, 258/258 tests passing across
-64 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
+Last run: `npm run build && npm test && npm run lint` — clean build, 266/266 tests passing across
+65 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
 that checkout is absent), zero lint errors. Confirmed no test files leak into `dist/` after
-`rm -rf dist && npm run build`; the two new CLI entry points
+`rm -rf dist && npm run build`; the two CLI entry points
 (`dist/experiments/runComparisonExperiment.js`, `dist/experiments/analyzeComparisonResults.js`)
-compiled correctly. Largest new/edited file (Phase 6 remainder) is `anthropicLlmClient.ts` at 143
+compiled correctly. Also ran `npx tsc --noEmit` directly against the new/edited test files (test
+files are excluded from the normal `npm run build`/`npm test` type-check, a pre-existing project
+convention — see [[phases/phase-06]]'s remainder section) to catch anything the normal pipeline
+wouldn't; clean. Largest new/edited file (Phase 7 remainder) is `failureClustering.ts` at 158
 lines, comfortably under the 300-line ceiling.
 Re-run this before trusting this ledger; it is a snapshot, not a live status.

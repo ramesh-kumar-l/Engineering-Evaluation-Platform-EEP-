@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { RunAnalysisRecord } from '../analysis/analysisInput.js';
 import { analyzeComponentContributions, type ComponentContribution } from '../analysis/componentContribution.js';
+import type { RunVerificationRecord } from '../analysis/failureAnalysisInput.js';
+import { analyzeFailureClusters, type FailureClusterReport } from '../analysis/failureClustering.js';
 import { analyzeRepeatedRuns, type RepeatedRunAnalysisReport } from '../analysis/groupedAnalysis.js';
 import type { ConfidenceLevel } from '../analysis/tDistribution.js';
 import type { ExperimentId } from '../domain/common/ids.js';
@@ -19,6 +21,7 @@ export interface ComparisonAnalysisResult {
   readonly runCount: number;
   readonly repeatedRunReport: RepeatedRunAnalysisReport;
   readonly componentReports: readonly ComponentContribution[];
+  readonly failureClusterReport: FailureClusterReport;
 }
 
 /** Finds the most recently written experiment subdirectory under `resultsDir`, for when no `experimentId` is given. */
@@ -81,7 +84,16 @@ export async function analyzeComparisonResults(
     level,
   });
 
-  return { experimentId: id, runCount: bundles.length, repeatedRunReport, componentReports };
+  const verificationRecords: RunVerificationRecord[] = bundles.map((bundle) => ({
+    runId: bundle.run.id,
+    conditionName: bundle.conditionName,
+    taskCategory: bundle.taskCategory,
+    taskComplexity: bundle.taskComplexity,
+    verifications: bundle.verifications,
+  }));
+  const failureClusterReport = analyzeFailureClusters(verificationRecords, { level });
+
+  return { experimentId: id, runCount: bundles.length, repeatedRunReport, componentReports, failureClusterReport };
 }
 
 function printComparisonAnalysisResult(result: ComparisonAnalysisResult): void {
@@ -117,6 +129,27 @@ function printComparisonAnalysisResult(result: ComparisonAnalysisResult): void {
             : `  ${slice.metricName}: insufficient data (${comparison.reason})`,
         );
       }
+    }
+  }
+
+  console.log(`\n--- Failure clustering (worst verificationMethod first) ---`);
+  console.log('Overall:');
+  for (const summary of result.failureClusterReport.overall) {
+    console.log(
+      `  ${summary.method}: ${String(summary.failureCount)}/${String(summary.totalAttempts)} failed ` +
+        `(rate=${summary.failureRate.toFixed(3)}, CI=[${summary.confidenceInterval.lower.toFixed(3)}, ${summary.confidenceInterval.upper.toFixed(3)}])`,
+    );
+  }
+  for (const [label, summaries] of [
+    ['By condition', result.failureClusterReport.byCondition],
+    ['By category', result.failureClusterReport.byCategory],
+    ['By complexity', result.failureClusterReport.byComplexity],
+  ] as const) {
+    console.log(`${label}:`);
+    for (const summary of summaries) {
+      console.log(
+        `  ${summary.dimensionValue} / ${summary.method}: ${String(summary.failureCount)}/${String(summary.totalAttempts)} failed (rate=${summary.failureRate.toFixed(3)})`,
+      );
     }
   }
 }

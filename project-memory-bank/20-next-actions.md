@@ -1,8 +1,8 @@
 # 20 — Next Actions
 
-1. **Immediate:** await explicit user approval to proceed with the rest of Phase 7's roadmap scope
-   (failure analysis), Phase 8's orchestration follow-up (item 2b below), executing a live
-   comparison run (item 2 below), or Phase 9.
+1. **Immediate:** await explicit user approval to proceed with executing a live comparison run
+   (item 2 below) or Phase 9. Phase 7's roadmap scope (including failure analysis, item 2a below)
+   and Phase 8's orchestration follow-up (item 2b below) are now both fully implemented.
 2. **Phase 6 remainder — now implemented, live execution still open:**
    - `LlmSolvingAgent` (`src/harness/agents/llmSolvingAgent.ts`) is the real, LLM-backed solving
      agent, supporting Claude, ChatGPT, Gemini, or a local model via `src/harness/llm/` (ADR-013
@@ -32,10 +32,15 @@
    - `EccContextProvider`/`AblatedEccContextProvider` currently have no real `tokenCount` from
      ECC's CLI contract, so both use Phase 5's `estimateTokenCount()` fallback on the serialized
      package — revisit if ECC's documented output ever adds one.
-2a. **Phase 7 remainder (not yet done):** failure analysis (the 4th item in [[13-roadmap]]'s
-   Phase 7 row, alongside repeated-run/category/complexity analysis) — not requested this round's
-   exit criterion; add once there is real failure data (from an actual comparison run) to analyze,
-   e.g. which `verificationMethod` most often fails, clustered by category/complexity/condition.
+2a. **Phase 7 remainder — now implemented:** `src/analysis/failureClustering.ts`'s
+   `analyzeFailureClusters()` (the 4th item in [[13-roadmap]]'s Phase 7 row) clusters
+   `verificationMethod` failure rates overall and by condition/category/complexity, with a Wilson
+   confidence interval per cluster (reusing `proportionConfidenceInterval()` from ADR-011's
+   machinery, not new statistics), sorted worst-failure-rate-first.
+   `src/experiments/analyzeComparisonResults.ts` wires it in alongside `analyzeRepeatedRuns()`/
+   `analyzeComponentContributions()`. Proven correct against synthetic verification data in tests
+   only — like the rest of Phase 7/8, it has not yet run against a real comparison run's data,
+   since none has been executed (see item 2). See [[phases/phase-07]]'s remainder section.
 2b. **Phase 8 orchestration — now implemented:** `src/experiments/experimentConditions.ts` builds
    all 7 `AblatedEccContextProvider` component conditions (plus native and full ECC) and
    `runComparisonExperiment.ts` runs every one against the benchmark end-to-end. As with item 2,
@@ -94,5 +99,5 @@
    `agentBudgetConfigFromEnv()` for the agent's own turn/token/wall-clock budget env vars
    (`EEP_AGENT_MAX_TURNS`, `EEP_LLM_MAX_TOKENS`, `EEP_AGENT_WALL_CLOCK_BUDGET_MS`).
 
-Do not start further Phase 7/8/9 implementation, and do not execute a live comparison run, before
-approval is given (master prompt §40).
+Do not start Phase 9 implementation, and do not execute a live comparison run, before approval is
+given (master prompt §40).

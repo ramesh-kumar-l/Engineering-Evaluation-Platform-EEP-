@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ExperimentId, RunId } from '../domain/common/ids.js';
 import type { Metric } from '../domain/metric/metric.schema.js';
+import type { Verification } from '../domain/verification/verification.schema.js';
 import { analyzeComparisonResults } from './analyzeComparisonResults.js';
 import { writeRunResult, type RunResultBundle } from './resultsWriter.js';
 
@@ -18,6 +19,18 @@ function successMetric(runId: RunId, value: number): Metric {
   };
 }
 
+function testSuiteVerification(runId: RunId, passed: boolean): Verification {
+  return {
+    schemaVersion: '1.0.0',
+    id: `verification-${runId}` as Verification['id'],
+    runId,
+    method: 'test-suite',
+    passed,
+    evidenceIds: [],
+    timestamp: '2026-09-13T00:00:00Z',
+  };
+}
+
 function bundleFor(conditionName: string, runId: RunId, value: number): RunResultBundle {
   return {
     conditionName,
@@ -27,7 +40,7 @@ function bundleFor(conditionName: string, runId: RunId, value: number): RunResul
     run: { id: runId } as unknown as RunResultBundle['run'],
     trace: { id: `trace-${runId}` } as unknown as RunResultBundle['trace'],
     outcome: { id: `outcome-${runId}`, status: value === 1 ? 'SUCCESS' : 'TASK_FAILURE' } as unknown as RunResultBundle['outcome'],
-    verifications: [],
+    verifications: [testSuiteVerification(runId, value === 1)],
     evidence: [],
     metrics: [successMetric(runId, value)],
   };
@@ -67,6 +80,16 @@ describe('analyzeComparisonResults', () => {
     expect(historyContribution?.analysis.conditionsObserved).toEqual(
       expect.arrayContaining(['ecc', 'ecc-ablated:history']),
     );
+
+    expect(result.failureClusterReport.methodsObserved).toEqual(['test-suite']);
+    const overall = result.failureClusterReport.overall[0];
+    expect(overall?.method).toBe('test-suite');
+    expect(overall?.totalAttempts).toBe(5);
+    expect(overall?.failureCount).toBe(3);
+    const nativeCluster = result.failureClusterReport.byCondition.find((s) => s.dimensionValue === 'native');
+    expect(nativeCluster?.failureRate).toBe(1);
+    const eccCluster = result.failureClusterReport.byCondition.find((s) => s.dimensionValue === 'ecc');
+    expect(eccCluster?.failureRate).toBe(0);
   });
 
   it('resolves the most recently written experiment when no experimentId is given', async () => {
