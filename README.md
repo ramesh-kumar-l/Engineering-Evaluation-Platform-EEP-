@@ -36,7 +36,21 @@ for the full backlog.
 All durable project context — charter, architecture, domain model, methodology, roadmap,
 decisions, assumptions, risks, and current state — lives in
 [`project-memory-bank/`](project-memory-bank/). Read the relevant memory-bank files before
-reading source code or making changes.
+reading source code or making changes. Start with
+[`00-project-charter.md`](project-memory-bank/00-project-charter.md) for the mission and hard
+constraints, then [`04-architecture.md`](project-memory-bank/04-architecture.md) for the
+EEP/ECC boundary and module layering.
+
+## Demo
+
+[`docs/sample-dashboard.html`](docs/sample-dashboard.html) is a real, self-contained page
+produced by EEP's own rendering pipeline (`buildReport` → `writeDashboard`, the same code path
+`npm run dashboard:generate` runs) — download it and open it in a browser. **The two runs it
+shows are synthetic fixture data, not a real evaluation**, and the page says so in its own
+"Limitations" section; this demonstrates the dashboard renderer, not a benchmark result. To
+generate a real one from an actual comparison run: `npm run experiment:run` (needs your own LLM
+credentials — see [`project-memory-bank/20-next-actions.md`](project-memory-bank/20-next-actions.md)),
+then `npm run report:generate` and `npm run dashboard:generate`.
 
 ## Relationship to ECC
 
