@@ -12,7 +12,7 @@
 | 7 — Experimental Analysis | Complete (confidence intervals + effect size across categories/complexity, plus failure clustering by verificationMethod/condition/category/complexity — full roadmap scope), pending user approval to proceed |
 | 8 — Ablation | Complete (per-component measurement of ECC's contribution), pending user approval to proceed |
 | 9 — Reporting | Complete (canonical `Report`/`ReportGraph` persistence with full Runs→Metrics→Evidence traceability — this round's scope); CSV/Markdown/HTML formats remain roadmap backlog |
-| 10 — Dashboard Feasibility / MVP | Not started |
+| 10 — Dashboard Feasibility / MVP | Complete (feasibility spike + static, single-experiment MVP dashboard reading Phase 9's `ReportGraph` — this round's scope); richer views (comparison, failure analysis) await Phase 7/8 output folded into `Report` |
 | 11 — Public Benchmark | Not started |
 | 12 — External Reproduction | Not started |
 | 13 — CI / GitHub Integration | Not started |
@@ -49,3 +49,15 @@ as the canonical, citable artifact (that dump is kept only as a crash-safe write
 during a live run — see ADR-014). Like Phase 7/8, this has not yet run against real comparison
 data since no live run has been executed; validated against synthetic evaluated-run fixtures in
 tests.
+
+Phase 10's exit criterion this round was a feasibility spike plus an MVP dashboard reading from
+Phase 9's `Report` format. `src/dashboard/` renders one `ReportGraph` into a single,
+self-contained, offline-readable HTML page (an overview panel plus one drill-down section per
+`Evaluation`, reusing `traceEvaluation()` unchanged) — a static file, no dev server, no new
+dependency, chosen after weighing a client-side SPA and a dynamic local server against
+[[04-architecture]]'s local-first mandate (see ADR-015). `src/experiments/generateDashboard.ts`
+(`npm run dashboard:generate`) writes it to `dashboard/<experimentId>/index.html`. Multi-experiment
+comparison, complexity/category breakdowns, and failure-cluster views from
+[[12-dashboard-strategy]]'s full target list remain future work — they need Phase 7/8's analysis
+output folded into `ReportGraph` first, a gap already flagged in [[phases/phase-09]]. Like Phase
+7/8/9, validated only against synthetic fixtures; no live run has been executed yet.

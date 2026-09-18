@@ -71,7 +71,7 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `runHarness.ts` (`executeRun` — Task+Condition+Agent+ContextProvider → Run+Trace; carries an optional `onBeforeCleanup` hook (Phase 4) and now also returns the full `contextArtifact` on `HarnessRunOutcome` (Phase 5, ADR-009)) | Done — `Run.metadata.modelName`/`modelVersion` still not wired through, see [[20-next-actions]] |
 | `index.ts` (barrel) | Done |
 
-## src/experiments/ (Phase 6 remainder, extended Phase 9)
+## src/experiments/ (Phase 6 remainder, extended Phase 9/10)
 
 | Module | Status |
 |---|---|
@@ -81,6 +81,7 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `runComparisonExperiment.ts` (main loop: 3 real-fixture tasks × 9 conditions × 3 repetitions; runnable via `npm run experiment:run`) | Done — mechanism only; no live run executed yet |
 | `analyzeComparisonResults.ts` (reads dumped bundles back, drives Phase 7 (repeated-run + failure clustering)/8's analysis unchanged; runnable via `npm run experiment:analyze`) | Done — proven against synthetic bundles in tests; not yet run against live data |
 | `generateReport.ts` (reads dumped bundles back, builds+persists the canonical `ReportGraph` via `src/reporting/`; runnable via `npm run report:generate`) | Done (Phase 9) — proven against synthetic bundles in tests; not yet run against live data |
+| `generateDashboard.ts` (reads a persisted `report.json` back, renders+writes the static dashboard via `src/dashboard/`; runnable via `npm run dashboard:generate`) | Done (Phase 10) — proven against synthetic fixtures in tests; not yet run against live data |
 | `index.ts` (barrel) | Done |
 
 ## src/reporting/ (Phase 9)
@@ -93,7 +94,19 @@ Update this whenever a major feature/module is finished, not only at phase bound
 | `reportGraph.ts` (`ReportGraph` — a `Report` plus every entity it transitively references, deduplicated by id) | Done |
 | `buildReport.ts` (`buildReport` — the Phase 9 entry point: evaluated runs → `ReportGraph`) | Done |
 | `traceEvaluation.ts` (`traceEvaluation` — drills one Evaluation down to its full backing chain, `BrokenReportGraphError` on a broken graph) | Done |
-| `reportWriter.ts` (`writeReport`/`readReport` — persists to gitignored `reports/<experimentId>/report.json`) | Done |
+| `reportWriter.ts` (`writeReport`/`readReport`/`latestReportedExperimentId` — persists to gitignored `reports/<experimentId>/report.json`) | Done |
+| `index.ts` (barrel) | Done |
+
+## src/dashboard/ (Phase 10)
+
+| Module | Status |
+|---|---|
+| `htmlEscape.ts` (escapes report-sourced strings before embedding in generated HTML) | Done |
+| `outcomeStatusCounts.ts` (`outcomeStatusCounts` — tallies `Outcome.status` across a `ReportGraph`) | Done |
+| `renderOverview.ts` (`renderOverview` — report identity, limitations, status breakdown) | Done |
+| `renderEvaluationDetail.ts` (`renderEvaluationDetail` — one Evaluation's full drill-down chain via `traceEvaluation`) | Done |
+| `renderDashboardPage.ts` (`renderDashboardPage` — one self-contained HTML document per `ReportGraph`) | Done |
+| `dashboardWriter.ts` (`writeDashboard`/`defaultDashboardDir` — persists to gitignored `dashboard/<experimentId>/index.html`) | Done |
 | `index.ts` (barrel) | Done |
 
 ## src/evaluation/ (Phase 4)
@@ -160,16 +173,22 @@ user's own credentials and a deliberate `npm run experiment:run`), `Run.metadata
 `modelVersion` population (small additive `runHarness.ts` change, see [[20-next-actions]]),
 a general-purpose CLI, container/process-level sandboxing (open risk, see [[16-risks]]),
 CSV/Markdown/HTML report export formats (remaining Phase 9 roadmap scope beyond this round's
-canonical entity/persistence exit criterion), dashboard (Phase 10).
+canonical entity/persistence exit criterion), richer dashboard views — multi-experiment
+comparison, complexity/category breakdowns, failure-cluster views (remaining Phase 10 scope
+beyond this round's single-experiment MVP; needs Phase 7/8 analysis output folded into `Report`
+first).
 
 ## Verification snapshot
 
-Last run: `npm run build && npm test && npm run lint` — clean build, 284/284 tests passing across
-71 files (one test exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when
-that checkout is absent), zero lint errors. Confirmed no test files leak into `dist/` after
-`rm -rf dist && npm run build`; all three CLI entry points
+Last run: `npm run build && npm test && npm run lint` — clean build, 298/299 tests passing across
+79 files (the one failure, a subprocess-spawn timing test in `eccCliInvoker.test.ts`, is
+pre-existing flakiness under parallel worker load, confirmed passing in isolation; a separate test
+exercises a real sibling ECC checkout end-to-end and is `skipIf`-gated when that checkout is
+absent), zero lint errors. Confirmed no test files leak into `dist/` after
+`rm -rf dist && npm run build`; all four CLI entry points
 (`dist/experiments/runComparisonExperiment.js`, `dist/experiments/analyzeComparisonResults.js`,
-`dist/experiments/generateReport.js`) compiled correctly. Largest new/edited file (Phase 9) is
-`src/experiments/generateReport.ts` at 78 lines; largest in `src/reporting/` is
-`traceEvaluation.ts` at 66 lines — both comfortably under the 300-line ceiling.
+`dist/experiments/generateReport.js`, `dist/experiments/generateDashboard.js`) compiled correctly.
+Largest new/edited file (Phase 10) is `src/dashboard/renderEvaluationDetail.ts` at 59 lines;
+largest orchestration script is `src/experiments/generateReport.ts` at 78 lines — all comfortably
+under the 300-line ceiling.
 Re-run this before trusting this ledger; it is a snapshot, not a live status.

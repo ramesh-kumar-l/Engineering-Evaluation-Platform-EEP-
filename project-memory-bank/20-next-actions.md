@@ -1,10 +1,11 @@
 # 20 — Next Actions
 
 1. **Immediate:** await explicit user approval to proceed with executing a live comparison run
-   (item 2 below), Phase 10, or the remaining Phase 9 roadmap scope (item 2c below). Phase 7's
-   roadmap scope (including failure analysis, item 2a below), Phase 8's orchestration follow-up
-   (item 2b below), and Phase 9's canonical Report/persistence format (item 2c below) are now all
-   fully implemented.
+   (item 2 below), Phase 11, the remaining Phase 9 roadmap scope (item 2c below), or richer
+   Phase 10 dashboard views (item 2d below). Phase 7's roadmap scope (including failure analysis,
+   item 2a below), Phase 8's orchestration follow-up (item 2b below), Phase 9's canonical
+   Report/persistence format (item 2c below), and Phase 10's dashboard MVP (item 2d below) are now
+   all fully implemented.
 2. **Phase 6 remainder — now implemented, live execution still open:**
    - `LlmSolvingAgent` (`src/harness/agents/llmSolvingAgent.ts`) is the real, LLM-backed solving
      agent, supporting Claude, ChatGPT, Gemini, or a local model via `src/harness/llm/` (ADR-013
@@ -62,6 +63,17 @@
    "don't build ahead of a real need" discipline (ADR-004/ADR-009). Also not yet done: folding
    Phase 7/8's statistical analysis output into the persisted Report (currently
    `analyzeComparisonResults.ts`'s output stays console-only, in-memory).
+2d. **Phase 10 — now implemented:** `src/dashboard/`'s `renderDashboardPage()` renders one
+   `ReportGraph` into a single, self-contained, offline-readable HTML file (overview panel plus
+   one drill-down section per Evaluation, reusing `traceEvaluation()` unchanged) — a static file,
+   no dev server, no new dependency (ADR-015 in [[14-decisions]]). `src/experiments/
+   generateDashboard.ts` (`npm run dashboard:generate`) writes it to
+   `dashboard/<experimentId>/index.html`. **Not yet done:** the rest of
+   [[12-dashboard-strategy]]'s target view list — multi-experiment/condition comparison,
+   complexity/category breakdowns, failure-cluster views — all of which need Phase 7/8's analysis
+   output folded into `ReportGraph` first (same gap item 2c above already flags). Also not done:
+   any client-side interactivity, and human-readable Task/Condition names (the dashboard shows raw
+   `taskId`/`conditionId` since `ReportGraph` doesn't carry `Task`/`Condition` entities).
 3. **Fixture backlog (not phase-blocking, pick up incrementally):** 27 of the 30 tasks still use
    the `"unpinned"` sentinel — only `debugging-01`, `feature-01`, `refactoring-01` have real
    fixture source code, a real `commitSha`, and real verification coverage. Author the rest the
@@ -125,6 +137,19 @@
    record, not the canonical artifact — `reports/<experimentId>/report.json` is; don't treat the
    raw dump as something a report reader/dashboard should read directly.
 
-Do not execute a live comparison run before approval is given (master prompt §40). Phase 10
-(Dashboard) and the remaining Phase 9 roadmap scope (item 2c above) also await explicit approval
-before implementation starts.
+11. **Dashboard convention note (ADR-015):** `src/dashboard/` depends only on `src/domain/` and
+   `src/reporting/` — it never imports from `src/experiments/`/`harness`/`evaluation`, matching
+   [[04-architecture]]'s layering ("Dashboard... reads canonical artifacts only, owns no
+   evaluation logic"). `src/experiments/generateDashboard.ts` is the one place that resolves which
+   report to read from disk; keep that resolution there, not inside `src/dashboard/`. Every
+   report-sourced string must pass through `htmlEscape.ts` before being embedded in rendered HTML
+   — this data can be LLM/agent-authored. The dashboard is a static-file generator, not a server;
+   don't add a dev/live server without a concrete need (ADR-004/ADR-009 discipline). Any new
+   gitignored output directory under the repo root (`reports/`, `dashboard/`,
+   `experiment-results/`) must be anchored with a leading `/` in `.gitignore` — an unanchored
+   pattern can accidentally match a same-named `src/` subdirectory, as happened with `dashboard/`
+   matching `src/dashboard/` when first added (caught before commit).
+
+Do not execute a live comparison run before approval is given (master prompt §40). Phase 11
+(Public Benchmark), the remaining Phase 9 roadmap scope (item 2c above), and richer Phase 10
+dashboard views (item 2d above) also await explicit approval before implementation starts.

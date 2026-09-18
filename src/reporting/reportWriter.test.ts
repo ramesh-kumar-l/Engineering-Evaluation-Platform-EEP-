@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ExperimentId } from '../domain/common/ids.js';
 import type { ReportGraph } from './reportGraph.js';
-import { defaultReportsDir, readReport, writeReport } from './reportWriter.js';
+import { defaultReportsDir, latestReportedExperimentId, readReport, writeReport } from './reportWriter.js';
 
 function fakeGraph(experimentId: ExperimentId): ReportGraph {
   return {
@@ -47,5 +47,20 @@ describe('writeReport / readReport', () => {
     const readBack = await readReport(experimentId, reportsDir);
     expect(readBack.report.title).toBe('Fake report');
     expect(readBack.report.experimentId).toBe(experimentId);
+  });
+});
+
+describe('latestReportedExperimentId', () => {
+  it('returns the only report subdirectory when just one exists', async () => {
+    const reportsDir = await mkdtemp(join(tmpdir(), 'eep-reports-latest-'));
+    const experimentId = 'experiment-report-only' as ExperimentId;
+    await writeReport(fakeGraph(experimentId), reportsDir);
+
+    expect(await latestReportedExperimentId(reportsDir)).toBe(experimentId);
+  });
+
+  it('throws when no report subdirectories exist', async () => {
+    const reportsDir = await mkdtemp(join(tmpdir(), 'eep-reports-latest-empty-'));
+    await expect(latestReportedExperimentId(reportsDir)).rejects.toThrow();
   });
 });

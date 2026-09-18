@@ -5,16 +5,39 @@ source code, if picking this project back up after a break.
 
 ## Where things stand right now
 
-Phase 0 (Foundation) through Phase 9 (Reporting) are complete. Phase 6's full roadmap scope (real
-solving agent + actual comparison-run mechanism) is closed — see below. Phase 7 is complete against
-its *entire* roadmap row, including failure clustering — not just the confidence-intervals-and-
-effect-size scope from the round that first implemented it. Phase 8 (Ablation) is implemented and
-verified, scoped to per-component measurement of ECC's contribution. Phase 9 (Reporting) is
-implemented and verified, scoped to the canonical `Report`/`ReportGraph` persistence format with
-full Runs→Metrics→Evidence traceability (see below) — CSV/Markdown/HTML export remain roadmap
-backlog.
+Phase 0 (Foundation) through Phase 10 (Dashboard Feasibility/MVP) are complete. Phase 6's full
+roadmap scope (real solving agent + actual comparison-run mechanism) is closed — see below. Phase
+7 is complete against its *entire* roadmap row, including failure clustering — not just the
+confidence-intervals-and-effect-size scope from the round that first implemented it. Phase 8
+(Ablation) is implemented and verified, scoped to per-component measurement of ECC's contribution.
+Phase 9 (Reporting) is implemented and verified, scoped to the canonical `Report`/`ReportGraph`
+persistence format with full Runs→Metrics→Evidence traceability — CSV/Markdown/HTML export remain
+roadmap backlog. Phase 10 (Dashboard) is implemented and verified, scoped to a feasibility spike
+plus a static, single-experiment MVP dashboard reading Phase 9's `ReportGraph` format (see below).
 
-**Phase 9 (this session):** `src/reporting/` (new, pure — depends only on `src/domain/`, the same
+**Phase 10 (this session):** `src/dashboard/` (new, pure — depends only on `src/domain/` and
+`src/reporting/`, the same one-way-dependency discipline ADR-011/ADR-014 established) renders one
+experiment's `ReportGraph` into a single, self-contained, offline-readable HTML page: an overview
+panel (`renderOverview.ts` — title, experiment id, generated timestamp, required `limitations`,
+outcome-status breakdown via `outcomeStatusCounts.ts`) plus one drill-down section per Evaluation
+(`renderEvaluationDetail.ts`, reusing `src/reporting/traceEvaluation.ts` unchanged — run metadata,
+outcome summary, metrics/verifications tables, evidence honoring `Evidence.redacted`), assembled by
+`renderDashboardPage.ts` with inline `<style>` and zero external resource references. Every
+report-sourced string passes through `htmlEscape.ts` first (this data can be LLM/agent-authored
+text). A feasibility spike (documented in ADR-015/`phases/phase-10.md`) weighed this static
+generator against a client-side SPA and a dynamic local server, choosing the static generator
+because it needs zero new dependencies and matches [[04-architecture]]'s local-first mandate ("No
+database... until a real requirement demonstrates the need"). `src/experiments/
+generateDashboard.ts` (new, `npm run dashboard:generate`) reads a persisted `report.json` via a new
+`latestReportedExperimentId()` helper added to `reportWriter.ts` and writes the rendered page to
+`dashboard/<experimentId>/index.html` (`dashboardWriter.ts`). While implementing this, an
+unanchored `dashboard/` `.gitignore` pattern was caught matching the new `src/dashboard/` source
+directory too — fixed by anchoring all three output-directory ignore entries with a leading `/`.
+Proven correct against synthetic `ReportGraph` fixtures in tests (15 new tests across 8 new/edited
+test files) — like the rest of Phase 7/8/9, not yet run against a live comparison's real data. Full
+detail in [[phases/phase-10]] and ADR-015 in [[14-decisions]].
+
+**Phase 9:** `src/reporting/` (new, pure — depends only on `src/domain/`, the same
 one-way-dependency discipline ADR-011 established for `src/analysis/`) gives EEP its first-ever
 constructor for a schema-valid `Evaluation` record (`buildEvaluation.ts` — `evaluationSchema`
 existed unused since Phase 1) and a `buildReport()` (`buildReport.ts`) that assembles a
@@ -105,6 +128,14 @@ deliberately unimplemented (ADR-009). Full detail in [[phases/phase-05]].
 
 ## What is NOT done
 
+**Richer dashboard views don't exist yet.** `src/dashboard/` (Phase 10) renders only a single
+experiment's `ReportGraph` — [[12-dashboard-strategy]]'s full target view list (multi-experiment/
+condition comparison, complexity/category breakdowns, failure-cluster views) needs Phase 7/8's
+`analyzeComparisonResults.ts` output folded into `ReportGraph` first, which has not happened
+(same gap already flagged for Phase 9). No client-side interactivity, no dev/live server, no
+human-readable Task/Condition names (only raw `taskId`/`conditionId`) — see
+[[phases/phase-10]]'s "Explicitly not implemented" section for the full list.
+
 **No live comparison run has been executed yet.** `LlmSolvingAgent` and `src/experiments/` exist
 and are tested (mocked LLM responses; a synthetic-bundle wiring test for the analysis path), but
 nobody has run `npm run experiment:run` against a real Claude/ChatGPT/Gemini/local-model backend —
@@ -124,22 +155,25 @@ architecture — see ADR-012's trade-offs and [[phases/phase-08]]'s known limita
 `reports/<experimentId>/report.json`, but Phase 7/8's statistical analysis output
 (`RepeatedRunAnalysisReport`/`ComponentContribution[]`/`FailureClusterReport`) is *not* folded into
 it yet — `analyzeComparisonResults.ts`'s output stays console-only, in-memory. No CSV/Markdown/HTML
-report export formats exist yet (remaining [[13-roadmap]] Phase 9 scope). No general-purpose CLI or
-dashboard exist yet (Phase 10+). No container/process-level sandboxing (isolation is
+report export formats exist yet (remaining [[13-roadmap]] Phase 9 scope). A static, single-
+experiment MVP dashboard now exists (Phase 10, `src/dashboard/`), but no general-purpose CLI
+exists yet, and richer dashboard views remain future work (see above). No container/process-level
+sandboxing (isolation is
 filesystem-copy only; `testSuiteVerifier` and the solving agent's `run_tests` tool both spawn real
 child processes with only a wall-clock timeout — narrowed but not closed, see [[16-risks]]). Do not
 assume any of these exist without checking `implementation-status.md` first.
 
 ## Immediate next step
 
-Per the master prompt's strict phase gate, this Phase 9 work's completion is reported to the user
-and no further Phase 10 work or live run has started. Do not begin further work, and do not
+Per the master prompt's strict phase gate, this Phase 10 work's completion is reported to the user
+and no further Phase 11 work or live run has started. Do not begin further work, and do not
 execute a live comparison run, without an explicit new approval message from the user, even if
 this file is being read in a fresh session — see [[20-next-actions]] and [[00-project-charter]]
-§Working protocol. Phases 6, 7, 8, and 9 are now all fully complete against this round's scope;
-the next open items are: executing a live comparison run (needs the user's own LLM credentials and
-an explicit go-ahead), Phase 10 (Dashboard), or the remaining Phase 9 roadmap scope
-(CSV/Markdown/HTML export).
+§Working protocol. Phases 6, 7, 8, 9, and 10 are now all fully complete against this round's
+scope; the next open items are: executing a live comparison run (needs the user's own LLM
+credentials and an explicit go-ahead), Phase 11 (Public Benchmark), the remaining Phase 9 roadmap
+scope (CSV/Markdown/HTML export), or richer Phase 10 dashboard views (multi-experiment comparison,
+failure analysis — needs Phase 7/8 output folded into `Report` first).
 
 ## Process reminders for whoever (human or agent) picks this up
 
@@ -205,3 +239,11 @@ an explicit go-ahead), Phase 10 (Dashboard), or the remaining Phase 9 roadmap sc
   dump is a crash-safe write-ahead record, not the canonical artifact — `reports/<experimentId>/
   report.json` is. `Evaluation.evaluatorVersion` must come from the run's own recorded
   `metadata.evaluatorVersion`, never a separately-supplied parameter that could drift from it.
+- Dashboard convention (ADR-015): `src/dashboard/` depends only on `src/domain/` and
+  `src/reporting/` — never import from `src/experiments/`/`harness`/`evaluation`.
+  `src/experiments/generateDashboard.ts` is the one place that resolves which report to read from
+  disk. Every report-sourced string must pass through `htmlEscape.ts` before being embedded in
+  rendered HTML. The dashboard stays a static-file generator, not a server — don't add a dev/live
+  server without a concrete need (ADR-004/ADR-009 discipline). Any new gitignored output directory
+  under the repo root must be anchored with a leading `/` in `.gitignore` (an unanchored pattern
+  can accidentally match a same-named `src/` subdirectory, as happened here).

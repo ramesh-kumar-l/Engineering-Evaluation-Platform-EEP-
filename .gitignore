@@ -1,8 +1,9 @@
 node_modules/
 dist/
 coverage/
-experiment-results/
-reports/
+/experiment-results/
+/reports/
+/dashboard/
 .env
 .env.*
 !.env.example

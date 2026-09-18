@@ -13,9 +13,23 @@ engineering tasks, capturing full traces and producing reproducible, falsifiable
 
 ## Status
 
-Early foundation stage (Phase 0 of the roadmap — see
-[`project-memory-bank/13-roadmap.md`](project-memory-bank/13-roadmap.md)). No evaluation engine,
-benchmark, or CLI commands exist yet.
+Phase 10 of 13 complete — see
+[`project-memory-bank/19-phase-status.md`](project-memory-bank/19-phase-status.md) for the
+per-phase ledger and [`project-memory-bank/13-roadmap.md`](project-memory-bank/13-roadmap.md) for
+the full roadmap. **299 tests passing across 78 files** (verified 2026-09-19: `npm test`).
+
+Built and working: the evaluation contract and 14-entity domain model, a 30-task benchmark (3
+with real fixture code and pinned commits), an isolated experiment harness, deterministic
+verification, a 14-of-22-metric scoring engine, a hand-rolled statistics module (confidence
+intervals, effect sizes, failure clustering), a real ECC `ContextProvider` integration
+(subprocess CLI invocation, plus per-component ablation), canonical `Report`/`ReportGraph`
+persistence, and a static HTML dashboard MVP.
+
+Not yet done: executing a live comparison run against a real LLM backend (the mechanism is built
+and tested end-to-end against synthetic data; it needs the user's own API key or local model and
+an explicit `npm run experiment:run`), and Phase 11+ (public benchmark, external reproduction, CI
+integration). See [`project-memory-bank/20-next-actions.md`](project-memory-bank/20-next-actions.md)
+for the full backlog.
 
 ## Start here
 
@@ -30,6 +44,15 @@ The Engineering Context Compiler (ECC) is a separate, pre-existing repository. E
 one external, unmodified implementation of a generic `ContextProvider` interface — EEP never
 modifies ECC's source and never becomes coupled to its internals. See
 [`project-memory-bank/00-project-charter.md`](project-memory-bank/00-project-charter.md).
+
+## Relationship to AI-Evaluation-Platform (AEP)
+
+A separate repository, `AI-Evaluation-Platform`, also has "evaluation" in its purpose but answers
+a different question: AEP is a governance/deploy-readiness gate for arbitrary AI model or prompt
+outputs (RBAC, audit trail, mandatory-approval release gates). EEP is a scientific instrument for
+one narrower question — does AI-assisted *software engineering* tooling actually improve
+engineering outcomes — using a benchmark of realistic engineering tasks, with ECC as its first
+subject under test. The two are independent products with no shared code and no merge planned.
 
 ## License
 

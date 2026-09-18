@@ -15,7 +15,8 @@
     "format": "prettier --write .",
     "experiment:run": "npm run build && node dist/experiments/runComparisonExperiment.js",
     "experiment:analyze": "npm run build && node dist/experiments/analyzeComparisonResults.js",
-    "report:generate": "npm run build && node dist/experiments/generateReport.js"
+    "report:generate": "npm run build && node dist/experiments/generateReport.js",
+    "dashboard:generate": "npm run build && node dist/experiments/generateDashboard.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",

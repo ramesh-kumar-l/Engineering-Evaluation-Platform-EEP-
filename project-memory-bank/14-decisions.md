@@ -663,3 +663,70 @@ Format: Decision / Context / Options / Chosen approach / Reason / Trade-offs / C
   run's data (none has been executed yet — Phase 6's remaining scope); validated against synthetic
   evaluated-run fixtures in tests (19 new tests across 6 new/edited test files, 284 total).
 - **Status:** Accepted.
+
+## ADR-015: Static, self-contained HTML dashboard — a new pure `src/dashboard/` layer reading only the Phase 9 `ReportGraph`, no server process or new dependency
+
+- **Context:** Phase 10's exit criterion, as scoped by the user this round: a feasibility spike,
+  then an MVP dashboard reading from Phase 9's `Report` format ([[13-roadmap]]'s Phase 10 row,
+  "Only after the data layer stabilizes"; [[12-dashboard-strategy]]'s sequencing rule and design
+  principle, "Why should I trust this result? ... No black-box KPI."). Phase 9 (ADR-014) already
+  produces one self-contained `ReportGraph` per experiment; nothing yet renders it for a human.
+- **Feasibility spike — options considered (rendering/serving mechanism):** (a) a client-side SPA
+  (React/Vue or similar) fetching `report.json` at runtime; (b) a long-running local dynamic
+  server (e.g. Express) with API routes reading `reports/` on each request; (c) a static
+  server-rendered HTML generator — a pure function `ReportGraph -> HTML string`, written to
+  `dashboard/<experimentId>/index.html`, opened directly in a browser with no process to keep
+  running.
+- **Chosen approach:** (c). New `src/dashboard/` (`htmlEscape.ts`, `outcomeStatusCounts.ts`,
+  `renderOverview.ts`, `renderEvaluationDetail.ts`, `renderDashboardPage.ts`,
+  `dashboardWriter.ts`, `index.ts`) renders one complete, self-contained HTML document per
+  `ReportGraph`: an overview panel (title, experiment id, generated timestamp, required
+  `limitations`, outcome-status breakdown via `outcomeStatusCounts.ts`) plus one drill-down
+  section per `Evaluation`, built by reusing `src/reporting/traceEvaluation.ts` unchanged (run
+  metadata, outcome summary, metrics/verifications tables, evidence list respecting
+  `Evidence.redacted`). Inline `<style>`, zero external stylesheet/script/CDN reference. New
+  `src/experiments/generateDashboard.ts` (orchestration entry point, `npm run
+  dashboard:generate`) reads a persisted `report.json` via `src/reporting/reportWriter.ts`'s
+  `readReport()` (a new `latestReportedExperimentId()` helper added there, mirroring
+  `resultsWriter.ts`'s `latestExperimentId()`, resolves the default experiment) and writes the
+  rendered page via `dashboardWriter.ts`.
+- **Reason:** project-memory-bank/04-architecture.md is explicit: "No database, no message queue,
+  no microservices, no cloud infra until a real requirement demonstrates the need... Local-first:
+  results are files on disk." Options (a) and (b) both introduce a new dependency surface (a
+  frontend framework/bundler, or a server runtime) and a running process, for data that is
+  already fully computed and static once a report exists — neither is justified by any concrete
+  requirement yet (ADR-004/ADR-009 discipline: don't build ahead of a real need). Option (c) needs
+  zero new npm packages (Node's built-in `fs`/`path` plus template strings), is trivially
+  shareable (a single HTML file), and directly satisfies "MVP dashboard reading from Phase 9's
+  Report format" — it reads `report.json` and nothing else.
+- **Dependency direction:** `src/dashboard/` depends only on `src/domain/` and `src/reporting/`
+  (for `ReportGraph`/`traceEvaluation`/`EvaluationTrace`), never on `src/experiments/`/`harness`/
+  `evaluation` — the same one-way-dependency discipline ADR-011/ADR-014 established, and the exact
+  shape project-memory-bank/04-architecture.md's layering diagram specifies ("Dashboard... reads
+  canonical artifacts only, owns no evaluation logic"). `src/experiments/generateDashboard.ts` is
+  the one place that resolves *which* report to read from disk; `src/dashboard/` itself never
+  touches the filesystem except through `dashboardWriter.ts`'s write step.
+- **Security note:** every string sourced from report data (titles, limitations, run metadata,
+  outcome summaries, verification detail, evidence descriptions/content) is passed through
+  `htmlEscape.ts` before being embedded in the generated page — this data can ultimately be
+  LLM/agent-authored text (project-memory-bank/11-security.md), and the generated HTML must never
+  let it be interpreted as markup by a browser. `Evidence.redacted` is honored: redacted evidence
+  renders `[redacted]` instead of its `content` field.
+- **Trade-offs:** MVP scope only — a single-experiment view, not [[12-dashboard-strategy]]'s full
+  target view list. Deliberately deferred, not silently omitted: multi-experiment/condition
+  comparison views, complexity/category breakdowns, and failure-cluster views (Phase 7/8's
+  `analyzeComparisonResults.ts` output is not yet folded into `ReportGraph` — a known limitation
+  already flagged in [[phases/phase-09]]) all require data this dashboard's only input,
+  `ReportGraph`, does not yet carry. No client-side interactivity (filtering, sorting, search) —
+  purely static markup. Task/Condition human-readable names are not shown, only their raw
+  `taskId`/`conditionId`, since `ReportGraph` does not include `Task`/`Condition` entities.
+- **Consequences:** New `src/dashboard/*.ts` (all under 300 lines; largest source file
+  `renderEvaluationDetail.ts` at 59 lines) plus `src/experiments/generateDashboard.ts` (45 lines)
+  and `npm run dashboard:generate`. New gitignored `dashboard/` output directory (parallel to
+  `reports/`/`experiment-results/`; `.gitignore` entries for all three anchored to the repo root
+  with a leading `/` after discovering the unanchored `dashboard/` pattern also matched the new
+  `src/dashboard/` source directory). Extended `src/reporting/reportWriter.ts` with
+  `latestReportedExperimentId()` (no behavior change to existing exports). 15 new tests across 8
+  new/edited test files (299 total). Like Phase 7/8/9 before it, not yet exercised against a real
+  live comparison run's data — validated against synthetic `ReportGraph` fixtures in tests.
+- **Status:** Accepted.
